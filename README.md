@@ -3,5 +3,8 @@
 Idea is to watch something Russian with my Brazilian girlfriend and project
 live translation on a screen.
 
-Using Google trasnscribe and ChatGPT. Works ok after a couple of hours of work,
-it is looking promising.
+For now it is listening to the microphone, transcribe the speech and translates
+it using GPT3 (much faster and cheaper then GPT4).
+
+Works ok after a couple of hours of work, it is looking promising: but it is
+far from complete.
