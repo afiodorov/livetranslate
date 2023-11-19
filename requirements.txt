@@ -1,0 +1,4 @@
+google-cloud-speech==2.21.0
+google-cloud-storage==2.9.0
+pyaudio==0.2.13
+six==1.16.0
