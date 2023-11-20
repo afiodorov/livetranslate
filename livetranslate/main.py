@@ -1,25 +1,18 @@
 import json
-from asyncio import (
-    AbstractEventLoop,
-    Queue,
-    create_task,
-    get_running_loop,
-    run,
-)
+from asyncio import (AbstractEventLoop, Queue, create_task, get_running_loop,
+                     run)
 from typing import AsyncGenerator, AsyncIterable, Literal
 
-from google.cloud.speech import (
-    RecognitionConfig,
-    SpeechAsyncClient,
-    StreamingRecognitionConfig,
-    StreamingRecognitionResult,
-    StreamingRecognizeRequest,
-    StreamingRecognizeResponse,
-)
+from google.cloud.speech import (RecognitionConfig, SpeechAsyncClient,
+                                 StreamingRecognitionConfig,
+                                 StreamingRecognitionResult,
+                                 StreamingRecognizeRequest,
+                                 StreamingRecognizeResponse)
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion
 
 from livetranslate.mic import RATE, MicrophoneStream
+
 
 def last_words(text: str, n: int) -> str:
     last_words: str = " ".join(text.split(" ")[-n:])
