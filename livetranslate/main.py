@@ -7,24 +7,28 @@ from asyncio import (
     get_running_loop,
     run,
 )
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Literal
 
-from google.cloud import speech
+from google.cloud.speech import (
+    RecognitionConfig,
+    SpeechAsyncClient,
+    StreamingRecognitionConfig,
+    StreamingRecognitionResult,
+    StreamingRecognizeRequest,
+)
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion
 
 from livetranslate.mic import RATE, MicrophoneStream
 
-client = AsyncOpenAI()
 
-
-async def translate(transcript: str) -> str:
-    prompt = """
+async def translate(client: AsyncOpenAI, transcript: str) -> str:
+    prompt: str = """
     Translate this live transcription from Russian to Portuguese and add punctuation. Remember you
     are connected to the live stream so do your best job possible. As speaker speaks more context
     will be added - so don't worry about doing your best try. Return translation only.
     """
-    n_last = 7
+    n_last: int = 7
     last_words: str = " ".join(transcript.split(" ")[-n_last:])
 
     response: ChatCompletion = await client.chat.completions.create(
@@ -41,66 +45,70 @@ async def translate(transcript: str) -> str:
         ],
     )
     translation: str = ""
+
+    content: str | None = response.choices[0].message.content
+    if not content:
+        return translation
+
     try:
-        translation = str(
-            json.loads(response.choices[0].message.content)["translation"]
-        )
+        translation = str(json.loads(content)["translation"])
     except:
         pass
 
     return translation
 
 
-async def consumer(queue: Queue[str]):
+async def consumer(queue: Queue[str], client: AsyncOpenAI):
     while True:
         item: str = await queue.get()
-        translation = await translate(item)
+        translation = await translate(client, item)
         queue.task_done()
         if translation:
             print(translation)
 
 
 async def make_requests(
-    config: speech.StreamingRecognitionConfig,
+    config: StreamingRecognitionConfig,
     audio_generator: AsyncGenerator[bytes, None],
-) -> AsyncGenerator[speech.StreamingRecognizeRequest, None]:
-    yield speech.StreamingRecognizeRequest(streaming_config=config)
+) -> AsyncGenerator[StreamingRecognizeRequest, None]:
+    yield StreamingRecognizeRequest(streaming_config=config)
     async for audio_content in audio_generator:
-        yield speech.StreamingRecognizeRequest(audio_content=audio_content)
+        yield StreamingRecognizeRequest(audio_content=audio_content)
 
 
 async def main() -> None:
     loop: AbstractEventLoop = get_running_loop()
 
-    """Transcribe speech from audio file."""
     # See http://g.co/cloud/speech/docs/languages
-    language_code = "ru-RU"
+    language_code: Literal["ru-RU"] = "ru-RU"
 
-    client = speech.SpeechAsyncClient()
-    config = speech.RecognitionConfig(
-        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+    client: SpeechAsyncClient = SpeechAsyncClient()
+    config = RecognitionConfig(
+        encoding=RecognitionConfig.AudioEncoding.LINEAR16,
         sample_rate_hertz=RATE,
         language_code=language_code,
     )
 
-    streaming_config = speech.StreamingRecognitionConfig(
+    streaming_config: StreamingRecognitionConfig = StreamingRecognitionConfig(
         config=config,
         interim_results=True,
         single_utterance=False,
     )
 
-    queue = Queue(maxsize=1)
-    consumer_task = create_task(consumer(queue))
+    queue: Queue[str] = Queue(maxsize=1)
+    gpt_client: AsyncOpenAI = AsyncOpenAI()
+
+    consumer_task = create_task(consumer(queue, gpt_client))
 
     async with MicrophoneStream(loop) as stream:
-        audio_generator = stream.generator()
+        audio_generator: AsyncGenerator[bytes, None] = stream.generator()
         requests = make_requests(streaming_config, audio_generator)
         response_stream = await client.streaming_recognize(requests=requests)
         async for response in response_stream:
             if not response.results:
                 continue
 
-            result = response.results[0]
+            result: StreamingRecognitionResult = response.results[0]
             if not result.alternatives:
                 continue
 

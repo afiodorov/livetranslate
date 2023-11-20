@@ -43,9 +43,7 @@ class MicrophoneStream:
 
     async def __aexit__(
         self,
-        type: object,
-        value: object,
-        traceback: object,
+        *_,
     ) -> None:
         """Closes the stream, regardless of whether the connection was lost or not."""
         self._audio_stream.stop_stream()
@@ -58,11 +56,9 @@ class MicrophoneStream:
 
     def _fill_buffer(
         self,
-        in_data: object,
-        frame_count: int,
-        time_info: object,
-        status_flags: object,
-    ) -> object:
+        in_data: bytes | None,
+        *_,
+    ) -> tuple[bytes | None, int]:
         """Continuously collect data from the audio stream, into the buffer.
 
         Args:
@@ -74,7 +70,8 @@ class MicrophoneStream:
         Returns:
             The audio data as a bytes object
         """
-        self.loop.call_soon_threadsafe(self._buff.put_nowait, in_data)
+        if in_data:
+            self.loop.call_soon_threadsafe(self._buff.put_nowait, in_data)
         return None, pyaudio.paContinue
 
     async def generator(self) -> AsyncGenerator[bytes, None]:
