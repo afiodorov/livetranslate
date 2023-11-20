@@ -27,4 +27,4 @@ async def translate_text(text: str) -> str:
         }
     )
 
-    return last_words(response.translations[0].translated_text, 10)
+    return last_words(response.translations[0].translated_text, 10).strip()

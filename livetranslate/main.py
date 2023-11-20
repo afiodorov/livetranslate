@@ -9,6 +9,7 @@ from asyncio import (
 from typing import AsyncGenerator, AsyncIterable, Literal
 
 from google.api_core.exceptions import ClientError, ServerError
+from google.api_core.retry_async import AsyncRetry
 from google.cloud.speech import (
     RecognitionConfig,
     SpeechAsyncClient,
@@ -17,6 +18,7 @@ from google.cloud.speech import (
     StreamingRecognizeRequest,
     StreamingRecognizeResponse,
 )
+from Levenshtein import ratio
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion
 
@@ -65,10 +67,11 @@ async def consumer(queue: Queue[str], client: AsyncOpenAI):
         queue.task_done()
 
         if translation:
-            if translation.startswith(prev_translation):
-                print(f"{translation}\r", end="", flush=True)
-            elif translation != prev_translation:
-                print(translation, flush=True)
+            if ratio(translation, prev_translation) >= 0.9:
+                pad: str = " " * (len(prev_translation) - len(translation))
+                print(f"\r{translation}{pad}", end="", flush=True)
+            else:
+                print(f"\n{translation}", end="", flush=True)
 
             prev_translation = translation
 
@@ -113,7 +116,10 @@ async def main() -> None:
 
         while True:
             requests = make_requests(streaming_config, audio_generator)
-            response_stream = await client.streaming_recognize(requests=requests)
+            response_stream = await client.streaming_recognize(
+                requests=requests,
+                retry=AsyncRetry(timeout=1, predicate=lambda x: False),
+            )
             await keep_transcribing(response_stream, queue)
 
 
@@ -136,8 +142,14 @@ async def keep_transcribing(
                 _ = await queue.get()
                 queue.task_done()
             await queue.put(transcript)
-    except (ServerError, ClientError, CancelledError):
+    except (ServerError, ClientError):
         pass
+    except CancelledError:
+        if (
+            response_stream._call._cython_call._status.details()
+            == "Locally cancelled by application!"
+        ):
+            raise
 
 
 if __name__ == "__main__":
