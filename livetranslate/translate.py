@@ -1,10 +1,6 @@
 from google.cloud.translate import TranslateTextResponse, TranslationServiceAsyncClient
 
-
-def last_words(text: str, n: int) -> str:
-    last_words: str = " ".join(text.split(" ")[-n:])
-
-    return last_words
+from livetranslate.lang_utils import last_words
 
 
 async def translate_text(text: str, source_language: str, target_language: str) -> str:
