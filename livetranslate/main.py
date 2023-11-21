@@ -23,6 +23,7 @@ from Levenshtein import ratio
 
 from livetranslate.mic import RATE, MicrophoneStream
 from livetranslate.translate import translate_text
+from livetranslate.lang_utils import merge
 
 
 async def consumer(queue: Queue[str], source_language: str, target_language: str):
@@ -33,7 +34,11 @@ async def consumer(queue: Queue[str], source_language: str, target_language: str
         queue.task_done()
 
         if translation:
-            if ratio(translation, prev_translation) >= 0.95:
+            merged, is_merged = merge(prev_translation, translation)
+            if is_merged:
+                translation = merged
+
+            if is_merged or ratio(translation, prev_translation) >= 0.85:
                 pad: str = " " * (len(prev_translation) - len(translation))
                 print(f"\r{translation}{pad}", end="", flush=True)
             else:
