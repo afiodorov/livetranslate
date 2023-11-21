@@ -1,3 +1,4 @@
+import argparse
 from asyncio import (
     AbstractEventLoop,
     CancelledError,
@@ -6,7 +7,7 @@ from asyncio import (
     get_running_loop,
     run,
 )
-from typing import AsyncGenerator, AsyncIterable, Literal
+from typing import AsyncGenerator, AsyncIterable
 
 from google.api_core.exceptions import ClientError, ServerError
 from google.api_core.retry_async import AsyncRetry
@@ -24,11 +25,11 @@ from livetranslate.mic import RATE, MicrophoneStream
 from livetranslate.translate import translate_text
 
 
-async def consumer(queue: Queue[str]):
+async def consumer(queue: Queue[str], source_language: str, target_language: str):
     prev_translation: str = ""
     while True:
         transcript: str = await queue.get()
-        translation = await translate_text(transcript)
+        translation = await translate_text(transcript, source_language, target_language)
         queue.task_done()
 
         if translation:
@@ -50,17 +51,14 @@ async def make_requests(
         yield StreamingRecognizeRequest(audio_content=audio_content)
 
 
-async def main() -> None:
+async def main(source_language: str, target_language: str) -> None:
     loop: AbstractEventLoop = get_running_loop()
-
-    # See http://g.co/cloud/speech/docs/languages
-    language_code: Literal["ru-RU"] = "ru-RU"
 
     client: SpeechAsyncClient = SpeechAsyncClient()
     config = RecognitionConfig(
         encoding=RecognitionConfig.AudioEncoding.LINEAR16,
         sample_rate_hertz=RATE,
-        language_code=language_code,
+        language_code=source_language,
         use_enhanced=True,
         model="phone_call",
     )
@@ -73,7 +71,7 @@ async def main() -> None:
 
     queue: Queue[str] = Queue(maxsize=1)
 
-    create_task(consumer(queue))
+    create_task(consumer(queue, source_language, target_language))
 
     async with MicrophoneStream(loop) as stream:
         audio_generator: AsyncGenerator[bytes, None] = stream.generator()
@@ -119,4 +117,23 @@ async def keep_transcribing(
 
 
 if __name__ == "__main__":
-    run(main())
+    parser = argparse.ArgumentParser(description="Script for language translation")
+
+    parser.add_argument(
+        "-s",
+        "--source",
+        default="ru-RU",
+        type=str,
+        help="Source language (default: ru-RU). For language codes, see http://g.co/cloud/speech/docs/languages",
+    )
+    parser.add_argument(
+        "-t",
+        "--target",
+        default="pt-BR",
+        type=str,
+        help="Target language (default: pt-BR). For language codes, see http://g.co/cloud/speech/docs/languages",
+    )
+
+    args = parser.parse_args()
+
+    run(main(args.source, args.target))

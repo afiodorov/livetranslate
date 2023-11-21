@@ -7,7 +7,7 @@ def last_words(text: str, n: int) -> str:
     return last_words
 
 
-async def translate_text(text: str) -> str:
+async def translate_text(text: str, source_language: str, target_language: str) -> str:
     if not text:
         return ""
 
@@ -22,8 +22,8 @@ async def translate_text(text: str) -> str:
             "parent": parent,
             "contents": [last_words(text, 30)],
             "mime_type": "text/plain",  # mime types: text/plain, text/html
-            "source_language_code": "ru-RU",
-            "target_language_code": "pt-BR",
+            "source_language_code": source_language,
+            "target_language_code": target_language,
         }
     )
 
