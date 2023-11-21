@@ -1,4 +1,6 @@
+from livetranslate.lang_utils import last_words
 import argparse
+import json
 from asyncio import (
     AbstractEventLoop,
     CancelledError,
@@ -20,31 +22,71 @@ from google.cloud.speech import (
     StreamingRecognizeResponse,
 )
 from Levenshtein import ratio
+from openai import AsyncOpenAI
+from openai.types.chat import ChatCompletion
 
+from livetranslate.lang_utils import merge
 from livetranslate.mic import RATE, MicrophoneStream
 from livetranslate.translate import translate_text
-from livetranslate.lang_utils import merge
+
+prompt: str = """
+You're helping a live AI translator Your job is to unite these 2 translation into a coherent translation. Reply in {{target_language}}.
+"""
 
 
-async def consumer(queue: Queue[str], source_language: str, target_language: str):
+async def consumer(
+    queue: Queue[str],
+    source_language: str,
+    target_language: str,
+    gpt_client: AsyncOpenAI,
+):
     prev_translation: str = ""
+
     while True:
+        translation: str = ""
+
         transcript: str = await queue.get()
         translation = await translate_text(transcript, source_language, target_language)
         queue.task_done()
 
-        if translation:
-            merged, is_merged = merge(prev_translation, translation)
-            if is_merged:
-                translation = merged
+        if not translation:
+            continue
 
-            if is_merged or ratio(translation, prev_translation) >= 0.85:
-                pad: str = " " * (len(prev_translation) - len(translation))
-                print(f"\r{translation}{pad}", end="", flush=True)
-            else:
-                print(f"\n{translation}", end="", flush=True)
+        response: ChatCompletion = await gpt_client.chat.completions.create(
+            model="gpt-3.5-turbo-1106",
+            seed=1,
+            response_format={"type": "json_object"},
+            messages=[
+                {
+                    "role": "system",
+                    "content": 'You are a helpful assistant designed to output JSON of a combined translation'
+                },
+                {"role": "user", "content": prompt.replace("{{target_language}}", target_language, 1)},
+                {"role": "user", "content": prev_translation},
+                {"role": "user", "content": translation},
+            ],
+        )
 
-            prev_translation = translation
+        content: str | None = response.choices[0].message.content
+        if not content:
+            continue
+
+        try:
+            translation = str(json.loads(content)["translation"]).replace("\n", "")
+        except:
+            pass
+
+        merged, is_merged = merge(prev_translation, translation)
+        if is_merged:
+            translation = merged
+
+        if True or is_merged or ratio(translation, prev_translation) >= 0.85:
+            pad: str = " " * (len(prev_translation) - len(translation))
+            print(f"\r{translation}{pad}", end="", flush=True)
+        else:
+            print(f"\n{translation}", end="", flush=True)
+
+        prev_translation = translation
 
 
 async def make_requests(
@@ -76,7 +118,10 @@ async def main(source_language: str, target_language: str) -> None:
 
     queue: Queue[str] = Queue(maxsize=1)
 
-    create_task(consumer(queue, source_language, target_language))
+
+    gpt_client: AsyncOpenAI = AsyncOpenAI()
+
+    create_task(consumer(queue, source_language, target_language, gpt_client))
 
     async with MicrophoneStream(loop) as stream:
         audio_generator: AsyncGenerator[bytes, None] = stream.generator()
