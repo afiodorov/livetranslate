@@ -19,47 +19,12 @@ from google.cloud.speech import (
     StreamingRecognizeResponse,
 )
 from Levenshtein import ratio
-from openai import AsyncOpenAI
-from openai.types.chat import ChatCompletion
 
 from livetranslate.mic import RATE, MicrophoneStream
 from livetranslate.translate import translate_text
 
-# async def translate(client: AsyncOpenAI, transcript: str) -> str:
-#     prompt: str = """
-#     Translate this live transcription from Russian to Portuguese and add punctuation. Remember you
-#     are connected to the live stream so do your best job possible. As speaker speaks more context
-#     will be added - so don't worry about doing your best try. Return translation only.
-#     """
 
-#     response: ChatCompletion = await client.chat.completions.create(
-#         model="gpt-3.5-turbo-1106",
-#         seed=1,
-#         response_format={"type": "json_object"},
-#         messages=[
-#             {
-#                 "role": "system",
-#                 "content": "You are a helpful assistant designed to output JSON.",
-#             },
-#             {"role": "user", "content": prompt},
-#             {"role": "user", "content": last_words(transcript, 20)},
-#         ],
-#     )
-#     translation: str = ""
-
-#     content: str | None = response.choices[0].message.content
-#     if not content:
-#         return translation
-
-#     try:
-#         translation = str(json.loads(content)["translation"])
-#     except:
-#         pass
-
-#     return last_words(translation, 10)
-
-
-async def consumer(queue: Queue[str], client: AsyncOpenAI):
+async def consumer(queue: Queue[str]):
     prev_translation: str = ""
     while True:
         transcript: str = await queue.get()
@@ -67,7 +32,7 @@ async def consumer(queue: Queue[str], client: AsyncOpenAI):
         queue.task_done()
 
         if translation:
-            if ratio(translation, prev_translation) >= 0.9:
+            if ratio(translation, prev_translation) >= 0.95:
                 pad: str = " " * (len(prev_translation) - len(translation))
                 print(f"\r{translation}{pad}", end="", flush=True)
             else:
@@ -107,9 +72,8 @@ async def main() -> None:
     )
 
     queue: Queue[str] = Queue(maxsize=1)
-    gpt_client: AsyncOpenAI = AsyncOpenAI()
 
-    create_task(consumer(queue, gpt_client))
+    create_task(consumer(queue))
 
     async with MicrophoneStream(loop) as stream:
         audio_generator: AsyncGenerator[bytes, None] = stream.generator()
@@ -118,7 +82,9 @@ async def main() -> None:
             requests = make_requests(streaming_config, audio_generator)
             response_stream = await client.streaming_recognize(
                 requests=requests,
-                retry=AsyncRetry(timeout=1, predicate=lambda x: False),
+                retry=AsyncRetry(
+                    timeout=1, predicate=lambda e: isinstance(e, ServerError)
+                ),
             )
             await keep_transcribing(response_stream, queue)
 
