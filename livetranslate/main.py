@@ -97,8 +97,12 @@ async def main(source_language: str, target_language: str) -> None:
         audio_generator: AsyncGenerator[bytes, None] = stream.generator()
 
         while True:
-            requests = make_requests(streaming_config, audio_generator)
-            response_stream = await client.streaming_recognize(
+            requests: AsyncGenerator[StreamingRecognizeRequest, None] = make_requests(
+                streaming_config, audio_generator
+            )
+            response_stream: AsyncIterable[
+                StreamingRecognizeResponse
+            ] = await client.streaming_recognize(
                 requests=requests,
                 retry=AsyncRetry(
                     timeout=1, predicate=lambda e: isinstance(e, ServerError)
