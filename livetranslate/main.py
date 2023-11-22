@@ -9,7 +9,7 @@ from asyncio import (
 )
 from typing import AsyncGenerator, AsyncIterable
 
-from google.api_core.exceptions import ClientError, ServerError
+from google.api_core.exceptions import ClientError, ServerError, GoogleAPIError
 from google.api_core.retry_async import AsyncRetry
 from google.cloud.speech import (
     RecognitionConfig,
@@ -100,14 +100,17 @@ async def main(source_language: str, target_language: str) -> None:
             requests: AsyncGenerator[StreamingRecognizeRequest, None] = make_requests(
                 streaming_config, audio_generator
             )
-            response_stream: AsyncIterable[
-                StreamingRecognizeResponse
-            ] = await client.streaming_recognize(
-                requests=requests,
-                retry=AsyncRetry(
-                    timeout=1, predicate=lambda e: isinstance(e, ServerError)
-                ),
-            )
+            try:
+                response_stream: AsyncIterable[
+                    StreamingRecognizeResponse
+                ] = await client.streaming_recognize(
+                    requests=requests,
+                    retry=AsyncRetry(
+                        timeout=1, predicate=lambda e: isinstance(e, ServerError)
+                    ),
+                )
+            except GoogleAPIError:
+                continue
             await keep_transcribing(response_stream, queue, program_state)
 
 
@@ -126,9 +129,6 @@ async def keep_transcribing(
                 continue
 
             transcript = result.alternatives[0].transcript
-
-            if len(transcript) > 100:
-                return
 
             if queue.full():
                 _ = await queue.get()

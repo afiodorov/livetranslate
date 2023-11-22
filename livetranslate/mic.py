@@ -3,8 +3,8 @@ from typing import AsyncGenerator
 
 import pyaudio
 
-RATE = 16000
-CHUNK = int(RATE / 10)  # 100ms
+RATE: int = 16_000
+CHUNK: int = RATE // 10 # 100 ms
 
 
 class MicrophoneStream:
@@ -17,6 +17,7 @@ class MicrophoneStream:
         self._rate = rate
         self._chunk = chunk
         self.loop: AbstractEventLoop = loop
+        self.i: int = 0
 
         # Create a thread-safe buffer of audio data
         self._buff = Queue()
@@ -70,8 +71,16 @@ class MicrophoneStream:
         Returns:
             The audio data as a bytes object
         """
-        if in_data:
+        self.i = (self.i + 1) % 10
+
+        if in_data is not None:
             self.loop.call_soon_threadsafe(self._buff.put_nowait, in_data)
+
+            if self.i == 0:
+                # add artifical pause to the speaker - prevents transcripts beeing too long
+                to_add: bytes =  bytes([0] * 2 * RATE * 4)
+                self.loop.call_soon_threadsafe(self._buff.put_nowait, to_add)
+
         return None, pyaudio.paContinue
 
     async def generator(self) -> AsyncGenerator[bytes, None]:
