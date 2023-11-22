@@ -19,6 +19,7 @@ from google.cloud.speech import (
     StreamingRecognizeRequest,
     StreamingRecognizeResponse,
 )
+from google.cloud.translate import TranslationServiceAsyncClient
 from openai import AsyncOpenAI
 
 from livetranslate.flow import ProgramState, register
@@ -37,6 +38,7 @@ async def consumer(
     source_language: str,
     target_language: str,
     gpt_client: AsyncOpenAI,
+    translation_client: TranslationServiceAsyncClient,
 ):
     prev_translation: str = ""
 
@@ -44,7 +46,9 @@ async def consumer(
         translation: str = ""
 
         transcript: str = await queue.get()
-        translation = await translate_text(transcript, source_language, target_language)
+        translation = await translate_text(
+            translation_client, transcript, source_language, target_language
+        )
         queue.task_done()
 
         if not translation:
@@ -76,10 +80,6 @@ async def consumer(
         # except:
         #     continue
 
-        # if translation == "":
-        #     breakpoint()
-        #     pass
-
         merged, is_merged = merge(prev_translation, translation)
         if is_merged:
             translation = merged
@@ -107,12 +107,14 @@ async def main(source_language: str, target_language: str) -> None:
     loop: AbstractEventLoop = get_running_loop()
 
     client: SpeechAsyncClient = SpeechAsyncClient()
-    config = RecognitionConfig(
+    config: RecognitionConfig = RecognitionConfig(
         encoding=RecognitionConfig.AudioEncoding.LINEAR16,
         sample_rate_hertz=RATE,
         language_code=source_language,
         use_enhanced=True,
         model="phone_call",
+        enable_automatic_punctuation=True,
+        profanity_filter=False,
     )
 
     streaming_config: StreamingRecognitionConfig = StreamingRecognitionConfig(
@@ -124,8 +126,12 @@ async def main(source_language: str, target_language: str) -> None:
     queue: Queue[str] = Queue(maxsize=1)
 
     gpt_client: AsyncOpenAI = AsyncOpenAI()
-
-    create_task(consumer(queue, source_language, target_language, gpt_client))
+    translation_client = TranslationServiceAsyncClient()
+    create_task(
+        consumer(
+            queue, source_language, target_language, gpt_client, translation_client
+        )
+    )
 
     async with MicrophoneStream(loop) as stream:
         audio_generator: AsyncGenerator[bytes, None] = stream.generator()
@@ -156,6 +162,9 @@ async def keep_transcribing(
                 continue
 
             transcript = result.alternatives[0].transcript
+
+            if len(transcript) > 100:
+                return
 
             if queue.full():
                 _ = await queue.get()
