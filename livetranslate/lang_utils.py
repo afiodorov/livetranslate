@@ -10,3 +10,12 @@ def merge(prev_translation: str, tranlsation: str) -> tuple[str, bool]:
             return prev_translation + tranlsation[len(prev_translation) - i :], True
 
     return tranlsation, False
+
+
+def last_sentence(text: str) -> str:
+    text = text.strip()
+
+    if ". " in text:
+        text = ". ".join(text.split(". ")[1:])
+
+    return text

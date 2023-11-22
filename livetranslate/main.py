@@ -1,6 +1,4 @@
-from livetranslate.lang_utils import last_words
 import argparse
-import json
 from asyncio import (
     AbstractEventLoop,
     CancelledError,
@@ -21,16 +19,16 @@ from google.cloud.speech import (
     StreamingRecognizeRequest,
     StreamingRecognizeResponse,
 )
-from Levenshtein import ratio
 from openai import AsyncOpenAI
-from openai.types.chat import ChatCompletion
 
+from livetranslate.flow import ProgramState, register
 from livetranslate.lang_utils import merge
 from livetranslate.mic import RATE, MicrophoneStream
 from livetranslate.translate import translate_text
 
 prompt: str = """
-You're helping a live AI translator Your job is to unite these 2 translation into a coherent translation. Reply in {{target_language}}.
+You're helping another AI translator. Your job is to unite these 2 translation into a single coherent
+properly formatted translation with at most 2 sentences. Reply in {{target_language}}.
 """
 
 
@@ -52,39 +50,44 @@ async def consumer(
         if not translation:
             continue
 
-        response: ChatCompletion = await gpt_client.chat.completions.create(
-            model="gpt-3.5-turbo-1106",
-            seed=1,
-            response_format={"type": "json_object"},
-            messages=[
-                {
-                    "role": "system",
-                    "content": 'You are a helpful assistant designed to output JSON of a combined translation'
-                },
-                {"role": "user", "content": prompt.replace("{{target_language}}", target_language, 1)},
-                {"role": "user", "content": prev_translation},
-                {"role": "user", "content": translation},
-            ],
-        )
+        # response: ChatCompletion = await gpt_client.chat.completions.create(
+        #     model="gpt-3.5-turbo-1106",
+        #     seed=120,
+        #     response_format={"type": "json_object"},
+        #     messages=[
+        #         {
+        #             "role": "system",
+        #             "content": 'You are a helpful assistant designed to output JSON of a combined translation'
+        #         },
+        #         {"role": "user", "content": prompt.replace("{{target_language}}", target_language, 1)},
+        #         {"role": "user", "content": prev_translation},
+        #         {"role": "user", "content": translation},
+        #     ],
+        # )
 
-        content: str | None = response.choices[0].message.content
-        if not content:
-            continue
+        # content: str | None = response.choices[0].message.content
+        # if not content:
+        #     continue
 
-        try:
-            translation = str(json.loads(content)["translation"]).replace("\n", "")
-        except:
-            pass
+        # try:
+        #     for v in json.loads(content).values():
+        #         if isinstance(v, str) and v.strip():
+        #             translation = v.strip()
+        # except:
+        #     continue
+
+        # if translation == "":
+        #     breakpoint()
+        #     pass
 
         merged, is_merged = merge(prev_translation, translation)
         if is_merged:
             translation = merged
 
-        if True or is_merged or ratio(translation, prev_translation) >= 0.85:
-            pad: str = " " * (len(prev_translation) - len(translation))
-            print(f"\r{translation}{pad}", end="", flush=True)
-        else:
-            print(f"\n{translation}", end="", flush=True)
+        # translation = last_words(translation, 15)
+
+        pad: str = " " * (len(prev_translation) - len(translation))
+        print(f"\r{translation}{pad}", end="", flush=True)
 
         prev_translation = translation
 
@@ -99,6 +102,8 @@ async def make_requests(
 
 
 async def main(source_language: str, target_language: str) -> None:
+    program_state: ProgramState = register()
+
     loop: AbstractEventLoop = get_running_loop()
 
     client: SpeechAsyncClient = SpeechAsyncClient()
@@ -118,7 +123,6 @@ async def main(source_language: str, target_language: str) -> None:
 
     queue: Queue[str] = Queue(maxsize=1)
 
-
     gpt_client: AsyncOpenAI = AsyncOpenAI()
 
     create_task(consumer(queue, source_language, target_language, gpt_client))
@@ -134,12 +138,13 @@ async def main(source_language: str, target_language: str) -> None:
                     timeout=1, predicate=lambda e: isinstance(e, ServerError)
                 ),
             )
-            await keep_transcribing(response_stream, queue)
+            await keep_transcribing(response_stream, queue, program_state)
 
 
 async def keep_transcribing(
     response_stream: AsyncIterable[StreamingRecognizeResponse],
     queue: Queue[str],
+    program_state: ProgramState,
 ) -> None:
     try:
         async for response in response_stream:
@@ -159,10 +164,7 @@ async def keep_transcribing(
     except (ServerError, ClientError):
         pass
     except CancelledError:
-        if (
-            response_stream._call._cython_call._status.details()
-            == "Locally cancelled by application!"
-        ):
+        if program_state.keyboard_interrupt:
             raise
 
 
