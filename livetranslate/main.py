@@ -20,26 +20,19 @@ from google.cloud.speech import (
     StreamingRecognizeResponse,
 )
 from google.cloud.translate import TranslationServiceAsyncClient
-from openai import AsyncOpenAI
 
 from livetranslate.flow import ProgramState, register
 from livetranslate.lang_utils import merge
 from livetranslate.mic import RATE, MicrophoneStream
 from livetranslate.translate import translate_text
 
-prompt: str = """
-You're helping another AI translator. Your job is to unite these 2 translation into a single coherent
-properly formatted translation with at most 2 sentences. Reply in {{target_language}}.
-"""
-
 
 async def consumer(
     queue: Queue[str],
     source_language: str,
     target_language: str,
-    gpt_client: AsyncOpenAI,
     translation_client: TranslationServiceAsyncClient,
-):
+) -> None:
     prev_translation: str = ""
 
     while True:
@@ -54,37 +47,9 @@ async def consumer(
         if not translation:
             continue
 
-        # response: ChatCompletion = await gpt_client.chat.completions.create(
-        #     model="gpt-3.5-turbo-1106",
-        #     seed=120,
-        #     response_format={"type": "json_object"},
-        #     messages=[
-        #         {
-        #             "role": "system",
-        #             "content": 'You are a helpful assistant designed to output JSON of a combined translation'
-        #         },
-        #         {"role": "user", "content": prompt.replace("{{target_language}}", target_language, 1)},
-        #         {"role": "user", "content": prev_translation},
-        #         {"role": "user", "content": translation},
-        #     ],
-        # )
-
-        # content: str | None = response.choices[0].message.content
-        # if not content:
-        #     continue
-
-        # try:
-        #     for v in json.loads(content).values():
-        #         if isinstance(v, str) and v.strip():
-        #             translation = v.strip()
-        # except:
-        #     continue
-
         merged, is_merged = merge(prev_translation, translation)
         if is_merged:
             translation = merged
-
-        # translation = last_words(translation, 15)
 
         pad: str = " " * (len(prev_translation) - len(translation))
         print(f"\r{translation}{pad}", end="", flush=True)
@@ -125,13 +90,8 @@ async def main(source_language: str, target_language: str) -> None:
 
     queue: Queue[str] = Queue(maxsize=1)
 
-    gpt_client: AsyncOpenAI = AsyncOpenAI()
     translation_client = TranslationServiceAsyncClient()
-    create_task(
-        consumer(
-            queue, source_language, target_language, gpt_client, translation_client
-        )
-    )
+    create_task(consumer(queue, source_language, target_language, translation_client))
 
     async with MicrophoneStream(loop) as stream:
         audio_generator: AsyncGenerator[bytes, None] = stream.generator()
