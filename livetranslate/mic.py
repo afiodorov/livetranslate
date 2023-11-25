@@ -38,7 +38,6 @@ class MicrophoneStream:
             stream_callback=self._fill_buffer,
         )
         self.closed = False
-
         self._audio_stream.start_stream()
 
         return self
@@ -72,8 +71,7 @@ class MicrophoneStream:
         Returns:
             The audio data as a bytes object
         """
-        if in_data is not None:
-            self.loop.call_soon_threadsafe(self._buff.put_nowait, in_data)
+        self.loop.call_soon_threadsafe(self._buff.put_nowait, in_data)
 
         return in_data, pyaudio.paContinue
 

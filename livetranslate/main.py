@@ -1,9 +1,10 @@
 import argparse
 import json
 import os
-from asyncio import AbstractEventLoop, Queue, create_task, get_running_loop, run
+from asyncio import AbstractEventLoop, Queue, TaskGroup, get_running_loop, run
 from collections import Counter
 from typing import AsyncGenerator
+from urllib.parse import urlencode
 
 import websockets
 from google.cloud.translate import TranslationServiceAsyncClient
@@ -14,17 +15,19 @@ from livetranslate.translate import translate_text
 
 
 async def consumer(
-    queue: Queue[tuple[int, str]],
+    queue: Queue[tuple[int, str, bool]],
     source_language: str,
     target_language: str,
     translation_client: TranslationServiceAsyncClient,
 ) -> None:
+    prev_translation: str = ""
+
     while True:
         transcript: str = ""
         speaker: int
 
-        speaker, transcript = await queue.get()
-        translation = await translate_text(
+        speaker, transcript, is_final = await queue.get()
+        translation: str = await translate_text(
             translation_client, transcript, source_language, target_language
         )
         queue.task_done()
@@ -32,7 +35,13 @@ async def consumer(
         if not translation:
             continue
 
-        print(f"{speaker}: {translation}")
+        pad = " " * (len(prev_translation) - len(translation))
+        if is_final:
+            print(f"\r{speaker}: {translation}{pad}\n", end="", flush=True)
+        else:
+            print(f"\r{speaker}: {translation}{pad}", end="", flush=True)
+
+        prev_translation = translation
 
 
 async def sender(
@@ -42,12 +51,11 @@ async def sender(
         await ws.send(mic_data)
 
 
-async def receiver(ws: WebSocketClientProtocol, queue: Queue[tuple[int, str]]) -> None:
+async def receiver(
+    ws: WebSocketClientProtocol, queue: Queue[tuple[int, str, bool]]
+) -> None:
     async for msg in ws:
         res = json.loads(msg)
-
-        if not res.get("is_final"):
-            continue
 
         transcript: str = (
             res.get("channel", {}).get("alternatives", [{}])[0].get("transcript", "")
@@ -68,7 +76,7 @@ async def receiver(ws: WebSocketClientProtocol, queue: Queue[tuple[int, str]]) -
         if queue.full():
             _ = await queue.get()
             queue.task_done()
-        await queue.put((speaker, transcript))
+        await queue.put((speaker, transcript, bool(res["is_final"])))
 
 
 async def main(source_language: str, target_language: str) -> None:
@@ -76,23 +84,37 @@ async def main(source_language: str, target_language: str) -> None:
 
     loop: AbstractEventLoop = get_running_loop()
 
-    queue: Queue[tuple[int, str]] = Queue(maxsize=1)
+    queue: Queue[tuple[int, str, bool]] = Queue(maxsize=1)
 
-    translation_client = TranslationServiceAsyncClient()
-    create_task(consumer(queue, source_language, target_language, translation_client))
-    deepgram_url = (
-        f"wss://api.deepgram.com/v1/listen?diarize=true&punctuate=true"
-        f"&language={source_language.split('-')[0]}&encoding=linear16&sample_rate={RATE}"
-    )
+    params: dict[str, str] = {
+        "diarize": "true",
+        "punctuate": "true",
+        "filler_words": "true",
+        "interim_results": "true",
+        "language": source_language.split("-")[0],
+        "encoding": "linear16",
+        "sample_rate": str(RATE),
+    }
+
+    if params["language"] in ("en", "fr", "de", "hi", "pt", "es"):
+        params["tier"] = "nova"
+        params["model"] = "2-general"
+
+    query_string = urlencode(params)
+    deepgram_url = f"wss://api.deepgram.com/v1/listen?{query_string}"
     key = os.environ["DEEPGRAM_API_KEY"]
 
-    async with websockets.connect(
+    translation_client = TranslationServiceAsyncClient()
+
+    async with MicrophoneStream(loop) as stream, websockets.connect(
         deepgram_url, extra_headers={"Authorization": f"Token {key}"}
-    ) as ws:
-        create_task(receiver(ws, queue))
-        async with MicrophoneStream(loop) as stream:
-            audio_generator: AsyncGenerator[bytes, None] = stream.generator()
-            await create_task(sender(ws, audio_generator))
+    ) as ws, TaskGroup() as tg:
+        tg.create_task(
+            consumer(queue, source_language, target_language, translation_client)
+        )
+
+        tg.create_task(receiver(ws, queue))
+        tg.create_task(sender(ws, stream.generator()))
 
 
 if __name__ == "__main__":
