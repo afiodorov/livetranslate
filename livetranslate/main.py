@@ -30,10 +30,8 @@ async def consumer(
     source_language: str,
     target_language: str,
     translation_client: TranslationServiceAsyncClient,
-    update_subtitles: Callable[[str, str], None],
+    update_subtitles: Callable[[str], None],
 ) -> None:
-    prev_translation: str = ""
-
     while True:
         transcript: str = ""
 
@@ -47,10 +45,9 @@ async def consumer(
             continue
 
         if is_final:
-            prev_translation = translation
-            update_subtitles(translation, translation)
+            update_subtitles(translation)
         else:
-            update_subtitles(prev_translation, translation)
+            update_subtitles(translation)
 
 
 async def sender(
@@ -91,7 +88,7 @@ async def receiver(
 async def main(
     source_language: str,
     target_language: str,
-    update_subtitles: Callable[[str, str], None],
+    update_subtitles: Callable[[str], None],
 ) -> None:
     loop: AbstractEventLoop = get_running_loop()
 
@@ -173,7 +170,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     app: QApplication
-    update_subtitles: Callable[[str, str], None]
+    update_subtitles: Callable[[str], None]
 
     app, update_subtitles = start_gui()
 
