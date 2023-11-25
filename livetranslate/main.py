@@ -5,6 +5,7 @@ import sys
 from asyncio import (
     AbstractEventLoop,
     Queue,
+    Task,
     TaskGroup,
     get_running_loop,
     new_event_loop,
@@ -17,6 +18,7 @@ from urllib.parse import urlencode
 
 import websockets
 from google.cloud.translate import TranslationServiceAsyncClient
+from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 from websockets.client import WebSocketClientProtocol
 
@@ -121,11 +123,11 @@ async def main(
     ):
         params["model"] = "enhanced"
 
-    query_string = urlencode(params)
-    deepgram_url = f"wss://api.deepgram.com/v1/listen?{query_string}"
-    key = os.environ["DEEPGRAM_API_KEY"]
+    query_string: str = urlencode(params)
+    deepgram_url: str = f"wss://api.deepgram.com/v1/listen?{query_string}"
+    key: str = os.environ["DEEPGRAM_API_KEY"]
 
-    translation_client = TranslationServiceAsyncClient()
+    translation_client: TranslationServiceAsyncClient = TranslationServiceAsyncClient()
 
     async with MicrophoneStream(loop) as stream, websockets.connect(
         deepgram_url, extra_headers={"Authorization": f"Token {key}"}
@@ -175,9 +177,25 @@ if __name__ == "__main__":
     app, update_subtitles = start_gui()
 
     asyncio_loop: AbstractEventLoop = new_event_loop()
-    asyncio_loop.create_task(main(args.source, args.target, update_subtitles))
+    task: Task[None] = asyncio_loop.create_task(
+        main(args.source, args.target, update_subtitles)
+    )
 
-    thread = Thread(target=run_asyncio_loop, args=(asyncio_loop,), daemon=True)
+    def check_task():
+        if not task.done():
+            return
+
+        try:
+            task.result()  # This will re-raise any exception that occurred in the task.
+        except Exception:
+            QApplication.quit()
+            raise
+
+    thread: Thread = Thread(target=run_asyncio_loop, args=(asyncio_loop,), daemon=True)
     thread.start()
+
+    timer = QTimer()
+    timer.timeout.connect(check_task)
+    timer.start(1000)
 
     sys.exit(app.exec())
