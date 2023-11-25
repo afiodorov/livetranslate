@@ -48,7 +48,7 @@ async def consumer(
 
         if is_final:
             prev_translation = translation
-            update_subtitles(translation, "")
+            update_subtitles(translation, translation)
         else:
             update_subtitles(prev_translation, translation)
 

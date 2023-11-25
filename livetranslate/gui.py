@@ -19,8 +19,8 @@ class SubtitleMapWindow(QMainWindow):
         # Set the title and initial size of the window
         self.setWindowTitle("LiveTranslate")
         screen = QApplication.primaryScreen().geometry()
-        window_width = 1000
-        window_height = 150
+        window_width = 1200
+        window_height = 100
 
         x_position = (
             screen.width() - window_width
@@ -42,8 +42,8 @@ class SubtitleMapWindow(QMainWindow):
         # Set the alignment and add to layout
         self.prev_subtitle_label.setAlignment(Qt.AlignCenter)
         self.current_subtitle_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(self.prev_subtitle_label)
         layout.addWidget(self.current_subtitle_label)
+        layout.addWidget(self.prev_subtitle_label)
 
         # Set font size
         default_font = QApplication.font()
