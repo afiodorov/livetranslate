@@ -1,15 +1,26 @@
 import argparse
 import json
 import os
-from asyncio import AbstractEventLoop, Queue, TaskGroup, get_running_loop, run
+import sys
+from asyncio import (
+    AbstractEventLoop,
+    Queue,
+    TaskGroup,
+    get_running_loop,
+    new_event_loop,
+    set_event_loop,
+)
 from collections import Counter
-from typing import AsyncGenerator
+from threading import Thread
+from typing import AsyncGenerator, Callable
 from urllib.parse import urlencode
 
 import websockets
 from google.cloud.translate import TranslationServiceAsyncClient
+from PySide6.QtWidgets import QApplication
 from websockets.client import WebSocketClientProtocol
 
+from livetranslate.gui import start_gui
 from livetranslate.mic import RATE, MicrophoneStream
 from livetranslate.translate import translate_text
 
@@ -19,14 +30,14 @@ async def consumer(
     source_language: str,
     target_language: str,
     translation_client: TranslationServiceAsyncClient,
+    update_subtitles: Callable[[str, str], None],
 ) -> None:
     prev_translation: str = ""
 
     while True:
         transcript: str = ""
-        speaker: int
 
-        speaker, transcript, is_final = await queue.get()
+        _, transcript, is_final = await queue.get()
         translation: str = await translate_text(
             translation_client, transcript, source_language, target_language
         )
@@ -35,13 +46,11 @@ async def consumer(
         if not translation:
             continue
 
-        pad = " " * (len(prev_translation) - len(translation))
         if is_final:
-            print(f"\r{speaker}: {translation}{pad}\n", end="", flush=True)
+            prev_translation = translation
+            update_subtitles(translation, "")
         else:
-            print(f"\r{speaker}: {translation}{pad}", end="", flush=True)
-
-        prev_translation = translation
+            update_subtitles(prev_translation, translation)
 
 
 async def sender(
@@ -79,9 +88,11 @@ async def receiver(
         await queue.put((speaker, transcript, bool(res["is_final"])))
 
 
-async def main(source_language: str, target_language: str) -> None:
-    # program_state: ProgramState = register()
-
+async def main(
+    source_language: str,
+    target_language: str,
+    update_subtitles: Callable[[str, str], None],
+) -> None:
     loop: AbstractEventLoop = get_running_loop()
 
     queue: Queue[tuple[int, str, bool]] = Queue(maxsize=1)
@@ -99,7 +110,18 @@ async def main(source_language: str, target_language: str) -> None:
     if params["language"] in ("en", "fr", "de", "hi", "pt", "es"):
         params["tier"] = "nova"
         params["model"] = "2-general"
-    elif params["language"] in ("da", "nl", "it", "ja", "ko", "no", "pl", "sv", "ta", "taq"):
+    elif params["language"] in (
+        "da",
+        "nl",
+        "it",
+        "ja",
+        "ko",
+        "no",
+        "pl",
+        "sv",
+        "ta",
+        "taq",
+    ):
         params["model"] = "enhanced"
 
     query_string = urlencode(params)
@@ -112,11 +134,22 @@ async def main(source_language: str, target_language: str) -> None:
         deepgram_url, extra_headers={"Authorization": f"Token {key}"}
     ) as ws, TaskGroup() as tg:
         tg.create_task(
-            consumer(queue, source_language, target_language, translation_client)
+            consumer(
+                queue,
+                source_language,
+                target_language,
+                translation_client,
+                update_subtitles,
+            )
         )
 
         tg.create_task(receiver(ws, queue))
         tg.create_task(sender(ws, stream.generator()))
+
+
+def run_asyncio_loop(loop):
+    set_event_loop(loop)
+    loop.run_forever()
 
 
 if __name__ == "__main__":
@@ -139,4 +172,15 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    run(main(args.source, args.target))
+    app: QApplication
+    update_subtitles: Callable[[str, str], None]
+
+    app, update_subtitles = start_gui()
+
+    asyncio_loop: AbstractEventLoop = new_event_loop()
+    asyncio_loop.create_task(main(args.source, args.target, update_subtitles))
+
+    thread = Thread(target=run_asyncio_loop, args=(asyncio_loop,), daemon=True)
+    thread.start()
+
+    sys.exit(app.exec())
