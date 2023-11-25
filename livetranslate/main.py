@@ -99,6 +99,8 @@ async def main(source_language: str, target_language: str) -> None:
     if params["language"] in ("en", "fr", "de", "hi", "pt", "es"):
         params["tier"] = "nova"
         params["model"] = "2-general"
+    elif params["language"] in ("da", "nl", "it", "ja", "ko", "no", "pl", "sv", "ta", "taq"):
+        params["model"] = "enhanced"
 
     query_string = urlencode(params)
     deepgram_url = f"wss://api.deepgram.com/v1/listen?{query_string}"
