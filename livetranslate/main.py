@@ -171,7 +171,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-t",
         "--target",
-        default="pt-BR",
+        default="",
         type=str,
         help="Target language (default: pt-BR). For language codes, see http://g.co/cloud/speech/docs/languages",
     )
@@ -183,9 +183,13 @@ if __name__ == "__main__":
 
     app, update_subtitles = start_gui()
 
+    target: str = args.target
+    if not target:
+        target = args.source
+
     asyncio_loop: AbstractEventLoop = new_event_loop()
     task: Task[None] = asyncio_loop.create_task(
-        main(args.source, args.target, update_subtitles)
+        main(args.source, target, update_subtitles)
     )
 
     def check_task():
