@@ -82,6 +82,10 @@ class SubtitleMapWindow(QMainWindow):
             QSizePolicy.Preferred, QSizePolicy.Preferred
         )
 
+        self.current_subtitle_label.setFixedWidth(window_width - 10)
+        self.current_subtitle_label.setFixedHeight(window_height - 10)
+        self.setFixedSize(window_width, window_height)
+
     @Slot(str)
     def update_subtitles(self, current_subtitle: str) -> None:
         self.current_subtitle_label.setText(current_subtitle)
