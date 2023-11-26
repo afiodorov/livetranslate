@@ -31,16 +31,20 @@ async def consumer(
     queue: Queue[tuple[int, str, bool]],
     source_language: str,
     target_language: str,
-    translation_client: TranslationServiceAsyncClient,
+    translation_client: TranslationServiceAsyncClient | None,
     update_subtitles: Callable[[str], None],
 ) -> None:
     while True:
         transcript: str = ""
 
         _, transcript, is_final = await queue.get()
-        translation: str = await translate_text(
-            translation_client, transcript, source_language, target_language
-        )
+        if translation_client:
+            translation: str = await translate_text(
+                translation_client, transcript, source_language, target_language
+            )
+        else:
+            translation = transcript
+
         queue.task_done()
 
         if not translation:
@@ -127,7 +131,10 @@ async def main(
     deepgram_url: str = f"wss://api.deepgram.com/v1/listen?{query_string}"
     key: str = os.environ["DEEPGRAM_API_KEY"]
 
-    translation_client: TranslationServiceAsyncClient = TranslationServiceAsyncClient()
+    translation_client: None | TranslationServiceAsyncClient = None
+
+    if source_language != target_language:
+        translation_client = TranslationServiceAsyncClient()
 
     async with MicrophoneStream(loop) as stream, websockets.connect(
         deepgram_url, extra_headers={"Authorization": f"Token {key}"}
