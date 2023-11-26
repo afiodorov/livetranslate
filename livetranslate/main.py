@@ -159,7 +159,9 @@ def run_asyncio_loop(loop: AbstractEventLoop) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Script for language translation")
+    parser: argparse.ArgumentParser = argparse.ArgumentParser(
+        description="LiveTranslate: automatic simultaneous translation"
+    )
 
     parser.add_argument(
         "-s",
@@ -173,7 +175,7 @@ if __name__ == "__main__":
         "--target",
         default="",
         type=str,
-        help="Target language (default: pt-BR). For language codes, see http://g.co/cloud/speech/docs/languages",
+        help="Target language (default: ''). When empty translation is disabled and only transcript is displayed",
     )
 
     args = parser.parse_args()
