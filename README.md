@@ -14,4 +14,4 @@ Works ok, see demo:
 python -m livetranslate.main -s ja-JP -t en-US
 ```
 
-[![Demo of the livetranslate](https://github.com/afiodorov/livetranslate/raw/main/demo.png)](https://github.com/afiodorov/livetranslate/raw/main/demo.gif)
+![Demo of the livetranslate](https://github.com/afiodorov/livetranslate/raw/main/demo.gif)
