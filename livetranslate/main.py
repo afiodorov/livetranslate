@@ -146,7 +146,7 @@ async def main(
         tg.create_task(sender(ws, stream.generator()))
 
 
-def run_asyncio_loop(loop):
+def run_asyncio_loop(loop: AbstractEventLoop) -> None:
     set_event_loop(loop)
     loop.run_forever()
 
@@ -194,7 +194,7 @@ if __name__ == "__main__":
     thread: Thread = Thread(target=run_asyncio_loop, args=(asyncio_loop,), daemon=True)
     thread.start()
 
-    timer = QTimer()
+    timer: QTimer = QTimer()
     timer.timeout.connect(check_task)
     timer.start(1000)
 
