@@ -1,7 +1,10 @@
+import os
+
+import aiohttp
 from google.cloud.translate import TranslateTextResponse, TranslationServiceAsyncClient
 
 
-async def translate_text(
+async def translate_text_google(
     client: TranslationServiceAsyncClient,
     text: str,
     source_language: str,
@@ -26,3 +29,47 @@ async def translate_text(
 
     result: str = response.translations[0].translated_text.strip()
     return result
+
+
+async def translate_text_deepl(
+    text: str,
+    source_language: str,
+    target_language: str,
+    context: str,
+) -> str:
+    """
+    Asynchronously translate text using DeepL API and requests-async library.
+
+    :param text: The text to be translated.
+    :param source_language: The source language code.
+    :param target_language: The target language code.
+    :param context: Additional context for the translation.
+    :return: The translated text as a string.
+    """
+    headers: dict[str, str] = {
+        "Authorization": f'DeepL-Auth-Key {os.getenv("DEEPL_API_KEY")}',
+        "Content-Type": "application/json",
+    }
+
+    source_lang: str = source_language.split("-")[0].upper()
+    target_lang: str = target_language.split("-")[0].upper()
+
+    payload: dict[str, str | list[str]] = {
+        "text": [text],
+        "source_lang": source_lang,
+        "target_lang": target_lang,
+        "context": context,
+    }
+
+    url: str = "https://api-free.deepl.com/v2/translate"
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, json=payload, headers=headers) as response:
+            if not response.ok:
+                print(response.text)
+                return ""
+            result = await response.json()
+
+            translated_text: str = result["translations"][0]["text"]
+
+    return translated_text

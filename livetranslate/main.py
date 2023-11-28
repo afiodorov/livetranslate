@@ -11,7 +11,7 @@ from asyncio import (
     new_event_loop,
     set_event_loop,
 )
-from collections import Counter
+from collections import Counter, deque
 from threading import Thread
 from typing import AsyncGenerator, Callable
 from urllib.parse import urlencode
@@ -24,7 +24,7 @@ from websockets.client import WebSocketClientProtocol
 
 from livetranslate.gui import start_gui
 from livetranslate.mic import RATE, MicrophoneStream
-from livetranslate.translate import translate_text
+from livetranslate.translate import translate_text_deepl, translate_text_google
 
 
 async def consumer(
@@ -34,13 +34,19 @@ async def consumer(
     translation_client: TranslationServiceAsyncClient | None,
     update_subtitles: Callable[[str], None],
 ) -> None:
+    context: deque[str] = deque(maxlen=3)
+
     while True:
         transcript: str = ""
 
         _, transcript, is_final = await queue.get()
         if translation_client:
-            translation: str = await translate_text(
+            translation: str = await translate_text_google(
                 translation_client, transcript, source_language, target_language
+            )
+        elif source_language != target_language:
+            translation: str = await translate_text_deepl(
+                transcript, source_language, target_language, "\n".join(context)
             )
         else:
             translation = transcript
@@ -52,6 +58,7 @@ async def consumer(
 
         if is_final:
             update_subtitles(translation)
+            context.append(f"-{transcript}")
         else:
             update_subtitles(translation)
 
@@ -95,6 +102,7 @@ async def main(
     source_language: str,
     target_language: str,
     update_subtitles: Callable[[str], None],
+    use_google_translate: bool,
 ) -> None:
     loop: AbstractEventLoop = get_running_loop()
 
@@ -133,7 +141,7 @@ async def main(
 
     translation_client: None | TranslationServiceAsyncClient = None
 
-    if source_language != target_language:
+    if source_language != target_language and use_google_translate:
         translation_client = TranslationServiceAsyncClient()
 
     async with MicrophoneStream(loop) as stream, websockets.connect(
@@ -177,6 +185,13 @@ if __name__ == "__main__":
         type=str,
         help="Target language (default: ''). When empty translation is disabled and only transcript is displayed",
     )
+    parser.add_argument(
+        "-g",
+        "--google-translate",
+        action="store_true",
+        default=False,
+        help="Enable translation using Google Translate. By default, DeepL is used. Use this flag to enable it.",
+    )
 
     args = parser.parse_args()
 
@@ -191,7 +206,7 @@ if __name__ == "__main__":
 
     asyncio_loop: AbstractEventLoop = new_event_loop()
     task: Task[None] = asyncio_loop.create_task(
-        main(args.source, target, update_subtitles)
+        main(args.source, target, update_subtitles, args.google_translate)
     )
 
     def check_task():

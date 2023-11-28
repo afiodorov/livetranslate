@@ -2,3 +2,4 @@ websockets==12.0
 google-cloud-translate==3.12.1
 PySide6==6.6.0
 PyAudio==0.2.14
+aiohttp==3.9.1
