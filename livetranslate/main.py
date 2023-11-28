@@ -46,7 +46,7 @@ async def consumer(
             )
         elif source_language != target_language:
             translation: str = await translate_text_deepl(
-                transcript, source_language, target_language, "\n".join(context)
+                transcript, source_language, target_language, " ".join(context)
             )
         else:
             translation = transcript
@@ -58,7 +58,7 @@ async def consumer(
 
         if is_final:
             update_subtitles(translation)
-            context.append(f"-{transcript}")
+            context.append(transcript)
         else:
             update_subtitles(translation)
 
