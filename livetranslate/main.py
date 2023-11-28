@@ -148,11 +148,12 @@ async def main(
     deepl_source = deepl_language(source_language)
     deepl_target = deepl_language(target_language)
 
-    if deepl_source is None or deepl_target is None:
-        use_google_translate = True
-    else:
-        source_language = deepl_source
-        target_language = deepl_target
+    if not use_google_translate:
+        if deepl_source is None or deepl_target is None:
+            use_google_translate = True
+        else:
+            source_language = deepl_source
+            target_language = deepl_target
 
     if source_language != target_language and use_google_translate:
         translation_client = TranslationServiceAsyncClient()
