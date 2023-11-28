@@ -33,8 +33,8 @@ async def translate_text_google(
 
 async def translate_text_deepl(
     text: str,
-    source_language: str,
-    target_language: str,
+    source_lang: str,
+    target_lang: str,
     context: str,
 ) -> str:
     """
@@ -50,9 +50,6 @@ async def translate_text_deepl(
         "Authorization": f'DeepL-Auth-Key {os.getenv("DEEPL_API_KEY")}',
         "Content-Type": "application/json",
     }
-
-    source_lang: str = source_language.split("-")[0].upper()
-    target_lang: str = target_language.split("-")[0].upper()
 
     payload: dict[str, str | list[str]] = {
         "text": [text],
@@ -73,3 +70,48 @@ async def translate_text_deepl(
             translated_text: str = result["translations"][0]["text"]
 
     return translated_text
+
+
+def deepl_language(language: str) -> str | None:
+    deepl_supported: list[str] = [
+        "BG",
+        "CS",
+        "DA",
+        "DE",
+        "EL",
+        "EN",
+        "EN-GB",
+        "EN-US",
+        "ES",
+        "ET",
+        "FI",
+        "FR",
+        "HU",
+        "ID",
+        "IT",
+        "JA",
+        "KO",
+        "LT",
+        "LV",
+        "NB",
+        "NL",
+        "PL",
+        "PT",
+        "PT-BR",
+        "PT-PT",
+        "RO",
+        "RU",
+        "SK",
+        "SL",
+        "SV",
+        "TR",
+        "UK",
+        "ZH",
+    ]
+    if (r := language.upper()) in deepl_supported:
+        return r
+
+    if (r := language.split("-")[0].upper()) in deepl_supported:
+        return r
+
+    return None

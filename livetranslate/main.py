@@ -24,7 +24,11 @@ from websockets.client import WebSocketClientProtocol
 
 from livetranslate.gui import start_gui
 from livetranslate.mic import RATE, MicrophoneStream
-from livetranslate.translate import translate_text_deepl, translate_text_google
+from livetranslate.translate import (
+    deepl_language,
+    translate_text_deepl,
+    translate_text_google,
+)
 
 
 async def consumer(
@@ -140,6 +144,15 @@ async def main(
     key: str = os.environ["DEEPGRAM_API_KEY"]
 
     translation_client: None | TranslationServiceAsyncClient = None
+
+    deepl_source = deepl_language(source_language)
+    deepl_target = deepl_language(target_language)
+
+    if deepl_source is None or deepl_target is None:
+        use_google_translate = True
+    else:
+        source_language = deepl_source
+        target_language = deepl_target
 
     if source_language != target_language and use_google_translate:
         translation_client = TranslationServiceAsyncClient()
