@@ -22,6 +22,7 @@ from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 from websockets.client import WebSocketClientProtocol
 
+from livetranslate.fullscreen_gui import start_gui as start_gui_fullscreen
 from livetranslate.gui import start_gui
 from livetranslate.mic import RATE, MicrophoneStream
 from livetranslate.translate import (
@@ -206,13 +207,23 @@ if __name__ == "__main__":
         default=False,
         help="Enable translation using Google Translate. By default, DeepL is used. Use this flag to enable it.",
     )
+    parser.add_argument(
+        "-f",
+        "--fullscreen",
+        action="store_true",
+        default=False,
+        help="Launch application fullscreen",
+    )
 
     args = parser.parse_args()
 
     app: QApplication
     update_subtitles: Callable[[str], None]
 
-    app, update_subtitles = start_gui()
+    if args.fullscreen:
+        app, update_subtitles = start_gui_fullscreen()
+    else:
+        app, update_subtitles = start_gui()
 
     target: str = args.target
     if not target:
