@@ -2,7 +2,7 @@
 
 Live Translate is a cutting-edge tool that provides real-time, simultaneous
 translation across various languages. It leverages the power of Deepgram for
-accurate transcription and Google Translate for seamless translation from any
+accurate transcription and DeepL for seamless translation from any
 source language to any target language.
 
 ## Features
@@ -11,7 +11,7 @@ source language to any target language.
 - **Wide Language Support**: Offers the flexibility to translate between a multitude of language pairs.
 - **Audio Input Support**: Listens to live audio input from the microphone for immediate transcription and translation.
 - **Deepgram Integration**: Utilizes Deepgram for accurate, AI-powered speech recognition.
-- **Google Translate**: Leverages Google Translate's robust language model to provide translations.
+- **DeepL**: Leverages DeepL robust language model to provide translations.
 
 ## Prerequisites
 
@@ -19,7 +19,7 @@ Before you begin, ensure you have the following:
 
 - Python version 3.11 or higher.
 - Microphone access on your device.
-- API keys for both Deepgram and Google Translate services.
+- API keys for both Deepgram and DeepL services.
 
 ## Advanced Language Models (LLM)
 
