@@ -58,12 +58,12 @@ async def translate_text_deepl(
         "context": context,
     }
 
-    url: str = "https://api-free.deepl.com/v2/translate"
+    url: str = "https://api.deepl.com/v2/translate"
 
     async with aiohttp.ClientSession() as session:
         async with session.post(url, json=payload, headers=headers) as response:
             if not response.ok:
-                print(response.text)
+                print(await response.text())
                 return ""
             result = await response.json()
 
