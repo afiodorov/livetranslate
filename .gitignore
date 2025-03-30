@@ -161,6 +161,3 @@ cython_debug/
 
 # Ctags
 tags
-
-# uv package manager
-uv.lock
