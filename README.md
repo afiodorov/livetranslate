@@ -21,6 +21,38 @@ Before you begin, ensure you have the following:
 - Microphone access on your device.
 - API keys for both Deepgram and DeepL services.
 
+## Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/afiodorov/livetranslate.git
+   cd livetranslate
+   ```
+
+2. Install dependencies using uv:
+   ```bash
+   make install
+   ```
+   
+   Or using pip:
+   ```bash
+   pip install -e .
+   ```
+
+3. Set up your environment variables:
+   
+   Copy the example environment file and add your API keys:
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Then edit the `.env` file and add your API keys:
+   ```
+   DEEPL_API_KEY=your_deepl_api_key_here
+   DEEPGRAM_API_KEY=your_deepgram_api_key_here
+   USE_DEEPL_PRO=false
+   ```
+
 ## Advanced Language Models (LLM)
 
 The translation quality can be significantly enhanced with the use of advanced
@@ -32,10 +64,35 @@ optimizations for faster LLM integration.
 
 Live Translate is open-sourced under the MIT license. For more details, see the LICENSE file.
 
-## Demo
+## Usage
 
-```
+Run the application with source and target languages:
+
+```bash
+# Using Python directly
 python -m livetranslate.main -s pl-PL -t en-US
+
+# Or using the make command
+make run
 ```
+
+### Command Line Options
+
+- `-s, --source`: Source language (default: ru-RU)
+- `-t, --target`: Target language (default: same as source)
+- `-g, --google-translate`: Use Google Translate instead of DeepL
+- `-f, --fullscreen`: Launch application in fullscreen mode
+
+### Example
+
+```bash
+# Translate from Polish to English
+python -m livetranslate.main -s pl-PL -t en-US
+
+# Use fullscreen mode with Google Translate
+python -m livetranslate.main -s ja-JP -t en-US -g -f
+```
+
+## Demo
 
 ![Demo of the livetranslate](https://github.com/afiodorov/livetranslate/raw/main/demo.gif)
