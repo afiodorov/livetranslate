@@ -1,4 +1,0 @@
-black==23.11.0
-isort==5.12
-pyright==1.1.337
-ruff==0.1.6

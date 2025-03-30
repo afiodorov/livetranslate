@@ -17,6 +17,9 @@ from typing import AsyncGenerator, Callable
 from urllib.parse import urlencode
 
 import websockets
+from dotenv import load_dotenv
+
+load_dotenv()  # Load environment variables from .env file
 from google.cloud.translate import TranslationServiceAsyncClient
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
