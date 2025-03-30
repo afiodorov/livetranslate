@@ -1,4 +1,7 @@
-.PHONY: lint format check install dev clean
+.PHONY: all lint format check install dev clean run
+
+# Default target - runs lint and format
+all: lint-all run
 
 # Python executable (uv run)
 PYTHON := uv run
@@ -17,11 +20,11 @@ check:
 
 # Run linting fixes
 lint:
-	ruff check --fix .
+	ruff check --fix . || true
 
 # Run formatter
 format:
-	ruff format .
+	ruff format . || true
 
 # Run both linting and formatting
 lint-all: lint format

@@ -156,14 +156,16 @@ async def main(
     # Process source and target languages for DeepL
     if deepl_source is None:
         print(f"Warning: Source language '{source_language}' not supported by DeepL.")
-        print("Supported language codes: BG, CS, DA, DE, EL, EN, ES, ET, FI, FR, HU, ID, IT, JA, KO, LT, LV, NB, NL, PL, PT, RO, RU, SK, SL, SV, TR, UK, ZH")
+        print("Supported language codes: BG, CS, DA, DE, EL, EN, ES, ET, FI, FR, HU, ID, IT, JA, KO, ")
+        print("LT, LV, NB, NL, PL, PT, RO, RU, SK, SL, SV, TR, UK, ZH")
         print("Using the source language as is for transcription.")
     else:
         source_language = deepl_source
-        
+
     if deepl_target is None:
         print(f"Warning: Target language '{target_language}' not supported by DeepL.")
-        print("Supported language codes: BG, CS, DA, DE, EL, EN, ES, ET, FI, FR, HU, ID, IT, JA, KO, LT, LV, NB, NL, PL, PT, RO, RU, SK, SL, SV, TR, UK, ZH")
+        print("Supported language codes: BG, CS, DA, DE, EL, EN, ES, ET, FI, FR, HU, ID, IT, JA, KO, ")
+        print("LT, LV, NB, NL, PL, PT, RO, RU, SK, SL, SV, TR, UK, ZH")
         print("Using source language for output (no translation).")
         target_language = source_language
     else:
