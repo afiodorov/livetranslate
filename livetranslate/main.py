@@ -120,21 +120,44 @@ async def main(
         "sample_rate": str(RATE),
     }
 
-    if params["language"] in ("en", "fr", "de", "hi", "pt", "es"):
-        params["tier"] = "nova"
-        params["model"] = "2-general"
+    if params["language"] in ("en"):
+        params["model"] = "nova-3"
     elif params["language"] in (
+        "bg",
+        "ca",
+        "cs",
         "da",
-        "nl",
+        "de",
+        "el",
+        "es",
+        "et",
+        "fi",
+        "fr",
+        "hi",
+        "hu",
+        "id",
         "it",
         "ja",
         "ko",
+        "lt",
+        "lv",
+        "ms",
+        "nl",
         "no",
         "pl",
+        "pt",
+        "ro",
+        "ru",
+        "sk",
         "sv",
-        "ta",
-        "taq",
+        "th",
+        "tr",
+        "uk",
+        "vi",
+        "zh",
     ):
+        params["model"] = "nova-2"
+    else:
         params["model"] = "enhanced"
 
     query_string: str = urlencode(params)
