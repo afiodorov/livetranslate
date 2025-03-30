@@ -58,7 +58,9 @@ async def translate_text_deepl(
         "context": context,
     }
 
-    url: str = "https://api.deepl.com/v2/translate"
+    # Use the Pro API endpoint if USE_DEEPL_PRO is set to true
+    use_pro = os.getenv("USE_DEEPL_PRO", "false").lower() == "true"
+    url: str = "https://api.deepl.com/v2/translate" if use_pro else "https://api-free.deepl.com/v2/translate"
 
     async with aiohttp.ClientSession() as session, session.post(
         url, json=payload, headers=headers
