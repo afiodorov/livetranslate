@@ -1,10 +1,10 @@
-.PHONY: all setup lint format check install dev clean run
+.PHONY: all lint format check install dev clean pip-install
 
-# Default target - installs dependencies, runs lint and format, then starts the app
-all: install dev lint-all run
+# Default target - only runs lint and format
+all: lint-all
 
-# Python executable (uv run)
-PYTHON := uv run
+# Python executable (for running scripts if needed)
+PYTHON := python
 
 # Install dependencies
 install:
@@ -39,11 +39,6 @@ pip-install:
 	pip install setuptools wheel
 	pip install -e .
 	pip install -e ".[dev]"
-
-# Run the application
-run:
-	@command -v uv >/dev/null 2>&1 || { echo "uv is not installed. Please install it first."; exit 1; }
-	$(PYTHON) -m livetranslate.main
 
 # Clean temporary files and caches
 clean:
