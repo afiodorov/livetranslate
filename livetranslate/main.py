@@ -18,7 +18,6 @@ from urllib.parse import urlencode
 
 import websockets
 from dotenv import load_dotenv
-from google.cloud.translate import TranslationServiceAsyncClient
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 from websockets.client import WebSocketClientProtocol
@@ -29,7 +28,6 @@ from livetranslate.mic import RATE, MicrophoneStream
 from livetranslate.translate import (
     deepl_language,
     translate_text_deepl,
-    translate_text_google,
 )
 
 # Load environment variables from .env file
@@ -40,7 +38,7 @@ async def consumer(
     queue: Queue[tuple[int, str, bool]],
     source_language: str,
     target_language: str,
-    translation_client: TranslationServiceAsyncClient | None,
+    translation_client: None,
     update_subtitles: Callable[[str], None],
 ) -> None:
     context: deque[str] = deque(maxlen=3)
@@ -49,11 +47,7 @@ async def consumer(
         transcript: str = ""
 
         _, transcript, is_final = await queue.get()
-        if translation_client:
-            translation: str = await translate_text_google(
-                translation_client, transcript, source_language, target_language
-            )
-        elif source_language != target_language:
+        if source_language != target_language:
             translation: str = await translate_text_deepl(
                 transcript, source_language, target_language, " ".join(context)
             )
@@ -111,7 +105,7 @@ async def main(
     source_language: str,
     target_language: str,
     update_subtitles: Callable[[str], None],
-    use_google_translate: bool,
+    _: bool,  # Kept for backward compatibility
 ) -> None:
     loop: AbstractEventLoop = get_running_loop()
 
@@ -148,7 +142,7 @@ async def main(
     deepgram_url: str = f"wss://api.deepgram.com/v1/listen?{query_string}"
     key: str = os.environ["DEEPGRAM_API_KEY"]
 
-    translation_client: None | TranslationServiceAsyncClient = None
+    translation_client: None = None
 
     deepl_source = deepl_language(source_language)
     deepl_target = deepl_language(target_language)
@@ -173,16 +167,8 @@ async def main(
     else:
         target_language = deepl_target
 
-    # Only use Google Translate if explicitly requested with the -g flag
-    if source_language != target_language and use_google_translate:
-        try:
-            translation_client = TranslationServiceAsyncClient()
-            print("Using Google Translate for translations.")
-        except Exception as e:
-            print(f"Error initializing Google Translate: {e}")
-            print("Falling back to DeepL for translations.")
-            use_google_translate = False
-            translation_client = None
+    # Google Translate functionality has been removed
+    translation_client = None
 
     async with MicrophoneStream(loop) as stream, websockets.connect(
         deepgram_url, extra_headers={"Authorization": f"Token {key}"}
@@ -227,14 +213,7 @@ if __name__ == "__main__":
         help="Target language (default: ''). When empty translation is disabled "
         "and only transcript is displayed",
     )
-    parser.add_argument(
-        "-g",
-        "--google-translate",
-        action="store_true",
-        default=False,
-        help="Enable translation using Google Translate. By default, DeepL is used. "
-        "Use this flag to enable it.",
-    )
+    # Google Translate argument removed
     parser.add_argument(
         "-f",
         "--fullscreen",
@@ -259,7 +238,7 @@ if __name__ == "__main__":
 
     asyncio_loop: AbstractEventLoop = new_event_loop()
     task: Task[None] = asyncio_loop.create_task(
-        main(args.source, target, update_subtitles, args.google_translate)
+        main(args.source, target, update_subtitles, False)
     )
 
     def check_task():

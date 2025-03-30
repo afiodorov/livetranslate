@@ -1,34 +1,6 @@
 import os
 
 import aiohttp
-from google.cloud.translate import TranslateTextResponse, TranslationServiceAsyncClient
-
-
-async def translate_text_google(
-    client: TranslationServiceAsyncClient,
-    text: str,
-    source_language: str,
-    target_language: str,
-) -> str:
-    if not text:
-        return ""
-
-    location = "global"
-
-    parent = f"projects/api-project-100069816556/locations/{location}"
-
-    response: TranslateTextResponse = await client.translate_text(
-        request={
-            "parent": parent,
-            "contents": [text],
-            "mime_type": "text/plain",  # mime types: text/plain, text/html
-            "source_language_code": source_language,
-            "target_language_code": target_language,
-        }
-    )
-
-    result: str = response.translations[0].translated_text.strip()
-    return result
 
 
 async def translate_text_deepl(
@@ -60,7 +32,11 @@ async def translate_text_deepl(
 
     # Use the Pro API endpoint if USE_DEEPL_PRO is set to true
     use_pro = os.getenv("USE_DEEPL_PRO", "false").lower() == "true"
-    url: str = "https://api.deepl.com/v2/translate" if use_pro else "https://api-free.deepl.com/v2/translate"
+    url: str = (
+        "https://api.deepl.com/v2/translate"
+        if use_pro
+        else "https://api-free.deepl.com/v2/translate"
+    )
 
     async with aiohttp.ClientSession() as session, session.post(
         url, json=payload, headers=headers
@@ -83,7 +59,7 @@ def deepl_language(language: str) -> str | None:
         "CZ": "CS",  # Map CZ (Czech) to CS
         "GR": "EL",  # Map GR (Greek) to EL
     }
-    
+
     deepl_supported: list[str] = [
         "BG",  # Bulgarian
         "CS",  # Czech
@@ -119,24 +95,24 @@ def deepl_language(language: str) -> str | None:
         "UK",  # Ukrainian
         "ZH",  # Chinese
     ]
-    
+
     # Check for direct match after converting to uppercase
     code = language.upper()
     if code in deepl_supported:
         return code
-    
+
     # Check if the code is in our mapping
     if code in language_map:
         return language_map[code]
-    
+
     # Try to get the language part before the hyphen (e.g., "en-US" -> "en")
     base_code = code.split("-")[0]
     if base_code in deepl_supported:
         return base_code
-    
+
     # Check if the base code is in our mapping
     if base_code in language_map:
         return language_map[base_code]
-    
+
     # Return None if no match found
     return None

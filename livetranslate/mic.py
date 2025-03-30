@@ -1,5 +1,5 @@
 from asyncio import AbstractEventLoop, Queue, QueueEmpty
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import pyaudio
 
