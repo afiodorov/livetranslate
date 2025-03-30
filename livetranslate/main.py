@@ -38,7 +38,6 @@ async def consumer(
     queue: Queue[tuple[int, str, bool]],
     source_language: str,
     target_language: str,
-    translation_client: None,
     update_subtitles: Callable[[str], None],
 ) -> None:
     context: deque[str] = deque(maxlen=3)
@@ -142,7 +141,7 @@ async def main(
     deepgram_url: str = f"wss://api.deepgram.com/v1/listen?{query_string}"
     key: str = os.environ["DEEPGRAM_API_KEY"]
 
-    translation_client: None = None
+    # translation_client no longer needed
 
     deepl_source = deepl_language(source_language)
     deepl_target = deepl_language(target_language)
@@ -168,7 +167,6 @@ async def main(
         target_language = deepl_target
 
     # Google Translate functionality has been removed
-    translation_client = None
 
     async with MicrophoneStream(loop) as stream, websockets.connect(
         deepgram_url, extra_headers={"Authorization": f"Token {key}"}
@@ -178,7 +176,6 @@ async def main(
                 queue,
                 source_language,
                 target_language,
-                translation_client,
                 update_subtitles,
             )
         )
