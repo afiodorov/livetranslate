@@ -80,7 +80,6 @@ make run
 
 - `-s, --source`: Source language (default: ru-RU)
 - `-t, --target`: Target language (default: same as source)
-- `-g, --google-translate`: Use Google Translate instead of DeepL
 - `-f, --fullscreen`: Launch application in fullscreen mode
 
 ### Example
@@ -89,8 +88,8 @@ make run
 # Translate from Polish to English
 python -m livetranslate.main -s pl-PL -t en-US
 
-# Use fullscreen mode with Google Translate
-python -m livetranslate.main -s ja-JP -t en-US -g -f
+# Use fullscreen mode
+python -m livetranslate.main -s ja-JP -t en-US -f
 ```
 
 ## Demo

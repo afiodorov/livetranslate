@@ -26,8 +26,6 @@ class MicrophoneStream:
         self._audio_interface = pyaudio.PyAudio()
         self._audio_stream = self._audio_interface.open(
             format=pyaudio.paInt16,
-            # The API currently only supports 1-channel (mono) audio
-            # https://goo.gl/z757pE
             channels=1,
             rate=self._rate,
             input=True,
