@@ -8,12 +8,12 @@ PYTHON := uv run
 
 # Install dependencies
 install:
-	uv pip install hatchling
+	uv pip install setuptools wheel
 	uv pip install -e .
 
 # Install development dependencies
 dev:
-	uv pip install hatchling
+	uv pip install setuptools wheel
 	uv pip install -e ".[dev]"
 
 # Run linting checks
@@ -33,6 +33,12 @@ lint-all: lint format
 
 # Setup environment - install all dependencies
 setup: install dev
+
+# Alternative installation using pip instead of uv
+pip-install:
+	pip install setuptools wheel
+	pip install -e .
+	pip install -e ".[dev]"
 
 # Run the application
 run:
