@@ -153,15 +153,32 @@ async def main(
     deepl_source = deepl_language(source_language)
     deepl_target = deepl_language(target_language)
 
-    if not use_google_translate:
-        if deepl_source is None or deepl_target is None:
-            use_google_translate = True
-        else:
-            source_language = deepl_source
-            target_language = deepl_target
+    # Process source and target languages for DeepL
+    if deepl_source is None:
+        print(f"Warning: Source language '{source_language}' not supported by DeepL.")
+        print("Supported language codes: BG, CS, DA, DE, EL, EN, ES, ET, FI, FR, HU, ID, IT, JA, KO, LT, LV, NB, NL, PL, PT, RO, RU, SK, SL, SV, TR, UK, ZH")
+        print("Using the source language as is for transcription.")
+    else:
+        source_language = deepl_source
+        
+    if deepl_target is None:
+        print(f"Warning: Target language '{target_language}' not supported by DeepL.")
+        print("Supported language codes: BG, CS, DA, DE, EL, EN, ES, ET, FI, FR, HU, ID, IT, JA, KO, LT, LV, NB, NL, PL, PT, RO, RU, SK, SL, SV, TR, UK, ZH")
+        print("Using source language for output (no translation).")
+        target_language = source_language
+    else:
+        target_language = deepl_target
 
+    # Only use Google Translate if explicitly requested with the -g flag
     if source_language != target_language and use_google_translate:
-        translation_client = TranslationServiceAsyncClient()
+        try:
+            translation_client = TranslationServiceAsyncClient()
+            print("Using Google Translate for translations.")
+        except Exception as e:
+            print(f"Error initializing Google Translate: {e}")
+            print("Falling back to DeepL for translations.")
+            use_google_translate = False
+            translation_client = None
 
     async with MicrophoneStream(loop) as stream, websockets.connect(
         deepgram_url, extra_headers={"Authorization": f"Token {key}"}

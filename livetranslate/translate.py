@@ -76,45 +76,67 @@ async def translate_text_deepl(
 
 
 def deepl_language(language: str) -> str | None:
+    # Common language code mappings
+    language_map = {
+        "CH": "ZH",  # Map CH (Chinese) to ZH (DeepL's code for Chinese)
+        "CN": "ZH",  # Map CN to ZH
+        "CZ": "CS",  # Map CZ (Czech) to CS
+        "GR": "EL",  # Map GR (Greek) to EL
+    }
+    
     deepl_supported: list[str] = [
-        "BG",
-        "CS",
-        "DA",
-        "DE",
-        "EL",
-        "EN",
-        "EN-GB",
-        "EN-US",
-        "ES",
-        "ET",
-        "FI",
-        "FR",
-        "HU",
-        "ID",
-        "IT",
-        "JA",
-        "KO",
-        "LT",
-        "LV",
-        "NB",
-        "NL",
-        "PL",
-        "PT",
-        "PT-BR",
-        "PT-PT",
-        "RO",
-        "RU",
-        "SK",
-        "SL",
-        "SV",
-        "TR",
-        "UK",
-        "ZH",
+        "BG",  # Bulgarian
+        "CS",  # Czech
+        "DA",  # Danish
+        "DE",  # German
+        "EL",  # Greek
+        "EN",  # English
+        "EN-GB",  # British English
+        "EN-US",  # American English
+        "ES",  # Spanish
+        "ET",  # Estonian
+        "FI",  # Finnish
+        "FR",  # French
+        "HU",  # Hungarian
+        "ID",  # Indonesian
+        "IT",  # Italian
+        "JA",  # Japanese
+        "KO",  # Korean
+        "LT",  # Lithuanian
+        "LV",  # Latvian
+        "NB",  # Norwegian
+        "NL",  # Dutch
+        "PL",  # Polish
+        "PT",  # Portuguese
+        "PT-BR",  # Brazilian Portuguese
+        "PT-PT",  # European Portuguese
+        "RO",  # Romanian
+        "RU",  # Russian
+        "SK",  # Slovak
+        "SL",  # Slovenian
+        "SV",  # Swedish
+        "TR",  # Turkish
+        "UK",  # Ukrainian
+        "ZH",  # Chinese
     ]
-    if (r := language.upper()) in deepl_supported:
-        return r
-
-    if (r := language.split("-")[0].upper()) in deepl_supported:
-        return r
-
+    
+    # Check for direct match after converting to uppercase
+    code = language.upper()
+    if code in deepl_supported:
+        return code
+    
+    # Check if the code is in our mapping
+    if code in language_map:
+        return language_map[code]
+    
+    # Try to get the language part before the hyphen (e.g., "en-US" -> "en")
+    base_code = code.split("-")[0]
+    if base_code in deepl_supported:
+        return base_code
+    
+    # Check if the base code is in our mapping
+    if base_code in language_map:
+        return language_map[base_code]
+    
+    # Return None if no match found
     return None
