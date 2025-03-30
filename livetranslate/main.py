@@ -12,14 +12,12 @@ from asyncio import (
     set_event_loop,
 )
 from collections import Counter, deque
+from collections.abc import AsyncGenerator, Callable
 from threading import Thread
-from typing import AsyncGenerator, Callable
 from urllib.parse import urlencode
 
 import websockets
 from dotenv import load_dotenv
-
-load_dotenv()  # Load environment variables from .env file
 from google.cloud.translate import TranslationServiceAsyncClient
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
@@ -33,6 +31,9 @@ from livetranslate.translate import (
     translate_text_deepl,
     translate_text_google,
 )
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 async def consumer(
@@ -194,21 +195,24 @@ if __name__ == "__main__":
         "--source",
         default="ru-RU",
         type=str,
-        help="Source language (default: ru-RU). For language codes, see http://g.co/cloud/speech/docs/languages",
+        help="Source language (default: ru-RU). For language codes, see "
+        "http://g.co/cloud/speech/docs/languages",
     )
     parser.add_argument(
         "-t",
         "--target",
         default="",
         type=str,
-        help="Target language (default: ''). When empty translation is disabled and only transcript is displayed",
+        help="Target language (default: ''). When empty translation is disabled "
+        "and only transcript is displayed",
     )
     parser.add_argument(
         "-g",
         "--google-translate",
         action="store_true",
         default=False,
-        help="Enable translation using Google Translate. By default, DeepL is used. Use this flag to enable it.",
+        help="Enable translation using Google Translate. By default, DeepL is used. "
+        "Use this flag to enable it.",
     )
     parser.add_argument(
         "-f",

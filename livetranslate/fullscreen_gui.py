@@ -1,6 +1,6 @@
 import signal
 import sys
-from typing import Callable
+from collections.abc import Callable
 
 from PySide6.QtCore import Qt, Signal, Slot
 from PySide6.QtGui import QColor, QPalette
@@ -19,11 +19,11 @@ class SubtitleMapWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.initUI()
+        self.init_ui()
 
         self.update_subtitles_signal.connect(self.update_subtitles)
 
-    def initUI(self):
+    def init_ui(self):
         self.setWindowTitle("LiveTranslate")
         self.setWindowFlags(self.windowFlags() | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)

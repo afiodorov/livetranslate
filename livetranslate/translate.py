@@ -60,14 +60,15 @@ async def translate_text_deepl(
 
     url: str = "https://api.deepl.com/v2/translate"
 
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, json=payload, headers=headers) as response:
-            if not response.ok:
-                print(await response.text())
-                return ""
-            result = await response.json()
+    async with aiohttp.ClientSession() as session, session.post(
+        url, json=payload, headers=headers
+    ) as response:
+        if not response.ok:
+            print(await response.text())
+            return ""
+        result = await response.json()
 
-            translated_text: str = result["translations"][0]["text"]
+        translated_text: str = result["translations"][0]["text"]
 
     return translated_text
 
