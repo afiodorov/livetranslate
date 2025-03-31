@@ -101,10 +101,10 @@ async def receiver(
 
 
 async def main(
+    *,
     source_language: str,
     target_language: str,
     update_subtitles: Callable[[str], None],
-    _: bool,  # Kept for backward compatibility
 ) -> None:
     loop: AbstractEventLoop = get_running_loop()
 
@@ -115,14 +115,14 @@ async def main(
         "punctuate": "true",
         "filler_words": "true",
         "interim_results": "true",
-        "language": source_language.split("-")[0],
+        "language": source_language,
         "encoding": "linear16",
         "sample_rate": str(RATE),
     }
 
-    if params["language"] in ("en"):
+    if params["language"].split("-")[0] in ("en"):
         params["model"] = "nova-3"
-    elif params["language"] in (
+    elif params["language"].split("-")[0] in (
         "bg",
         "ca",
         "cs",
@@ -258,7 +258,11 @@ if __name__ == "__main__":
 
     asyncio_loop: AbstractEventLoop = new_event_loop()
     task: Task[None] = asyncio_loop.create_task(
-        main(args.source, target, update_subtitles, False)
+        main(
+            source_language=args.source,
+            target_language=target,
+            update_subtitles=update_subtitles,
+        )
     )
 
     def check_task():
