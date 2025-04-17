@@ -2,7 +2,7 @@ import signal
 import sys
 from collections.abc import Callable
 
-from PySide6.QtCore import Qt, Signal, Slot
+from PySide6.QtCore import Qt, Signal, SignalInstance, Slot
 from PySide6.QtGui import QColor, QKeyEvent, QPalette
 from PySide6.QtWidgets import (
     QApplication,
@@ -122,7 +122,7 @@ class SubtitleMapWindow(QMainWindow):
             self.close()
 
 
-def start_gui() -> tuple[QApplication, Callable[[str], None], Signal]:
+def start_gui() -> tuple[QApplication, Callable[[str], None], SignalInstance]:
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     app: QApplication = QApplication(sys.argv)

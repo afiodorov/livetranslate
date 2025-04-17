@@ -18,7 +18,7 @@ from urllib.parse import urlencode
 
 import websockets
 from dotenv import load_dotenv
-from PySide6.QtCore import QTimer, Signal
+from PySide6.QtCore import QTimer, SignalInstance
 from PySide6.QtWidgets import QApplication
 from websockets.client import WebSocketClientProtocol
 
@@ -246,7 +246,7 @@ if __name__ == "__main__":
 
     app: QApplication
     update_subtitles: Callable[[str], None]
-    close_signal: Signal
+    close_signal: SignalInstance
 
     if args.fullscreen:
         app, update_subtitles, close_signal = start_gui_fullscreen()
