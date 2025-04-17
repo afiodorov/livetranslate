@@ -37,7 +37,9 @@ class SubtitleMapWindow(QMainWindow):
         x_position = (
             screen.width() - window_width
         ) // 2  # Center the window on the screen
-        y_position = screen.height() - window_height
+        # Get available screen geometry (accounts for dock, menu bar, etc.)
+        available_screen = QApplication.primaryScreen().availableGeometry()
+        y_position = available_screen.height() + available_screen.y() - window_height
         self.setGeometry(x_position, y_position, window_width, window_height)
 
         # Create a central widget
