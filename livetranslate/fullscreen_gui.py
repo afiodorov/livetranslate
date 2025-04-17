@@ -3,7 +3,7 @@ import sys
 from collections.abc import Callable
 
 from PySide6.QtCore import Qt, Signal, Slot
-from PySide6.QtGui import QColor, QPalette
+from PySide6.QtGui import QColor, QKeyEvent, QPalette
 from PySide6.QtWidgets import (
     QApplication,
     QLabel,
@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 
 class SubtitleMapWindow(QMainWindow):
     update_subtitles_signal = Signal(str)
+    close_signal = Signal()
 
     def __init__(self):
         super().__init__()
@@ -94,8 +95,15 @@ class SubtitleMapWindow(QMainWindow):
             self.offset = None
             self.setCursor(Qt.OpenHandCursor)
 
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.key() == Qt.Key_Escape:
+            # Emit close signal for graceful shutdown
+            self.close_signal.emit()
+            # Close the window
+            self.close()
 
-def start_gui() -> tuple[QApplication, Callable[[str], None]]:
+
+def start_gui() -> tuple[QApplication, Callable[[str], None], Signal]:
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     app: QApplication = QApplication(sys.argv)
@@ -105,4 +113,4 @@ def start_gui() -> tuple[QApplication, Callable[[str], None]]:
     def update_subtitles_threadsafe(current_subtitle: str) -> None:
         main_window.update_subtitles_signal.emit(current_subtitle)
 
-    return app, update_subtitles_threadsafe
+    return app, update_subtitles_threadsafe, main_window.close_signal

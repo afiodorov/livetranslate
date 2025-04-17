@@ -18,7 +18,7 @@ from urllib.parse import urlencode
 
 import websockets
 from dotenv import load_dotenv
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QTimer, Signal
 from PySide6.QtWidgets import QApplication
 from websockets.client import WebSocketClientProtocol
 
@@ -246,11 +246,12 @@ if __name__ == "__main__":
 
     app: QApplication
     update_subtitles: Callable[[str], None]
+    close_signal: Signal
 
     if args.fullscreen:
-        app, update_subtitles = start_gui_fullscreen()
+        app, update_subtitles, close_signal = start_gui_fullscreen()
     else:
-        app, update_subtitles = start_gui()
+        app, update_subtitles, close_signal = start_gui()
 
     target: str = args.target
     if not target:
@@ -277,6 +278,15 @@ if __name__ == "__main__":
 
     thread: Thread = Thread(target=run_asyncio_loop, args=(asyncio_loop,), daemon=True)
     thread.start()
+
+    # Handle clean shutdown when ESC is pressed
+    def cleanup_and_exit():
+        print("Shutting down gracefully...")
+        asyncio_loop.stop()
+        thread.join(timeout=0.5)
+        QApplication.quit()
+
+    close_signal.connect(cleanup_and_exit)
 
     timer: QTimer = QTimer()
     timer.timeout.connect(check_task)
