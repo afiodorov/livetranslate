@@ -21,9 +21,13 @@ class SubtitleMapWindow(QMainWindow):
         super().__init__(flags=Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
         self.init_ui()
 
+        self.dragging = False
+        self.offset = None
+
         self.update_subtitles_signal.connect(self.update_subtitles)
 
     def init_ui(self):
+        self.setCursor(Qt.OpenHandCursor)
         # Set the title and initial size of the window
         self.setWindowTitle("LiveTranslate")
         self.setWindowFlags(self.windowFlags() | Qt.FramelessWindowHint)
@@ -91,6 +95,23 @@ class SubtitleMapWindow(QMainWindow):
     @Slot(str)
     def update_subtitles(self, current_subtitle: str) -> None:
         self.current_subtitle_label.setText(current_subtitle)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.dragging = True
+            self.offset = event.pos()
+            self.setCursor(Qt.ClosedHandCursor)
+
+    def mouseMoveEvent(self, event):
+        if self.dragging and self.offset:
+            new_pos = event.globalPos() - self.offset
+            self.move(new_pos)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.dragging = False
+            self.offset = None
+            self.setCursor(Qt.OpenHandCursor)
 
 
 def start_gui() -> tuple[QApplication, Callable[[str], None]]:
