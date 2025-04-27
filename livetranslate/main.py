@@ -22,7 +22,6 @@ from PySide6.QtCore import QTimer, SignalInstance
 from PySide6.QtWidgets import QApplication
 from websockets.client import WebSocketClientProtocol
 
-from livetranslate.fullscreen_gui import start_gui as start_gui_fullscreen
 from livetranslate.gui import start_gui
 from livetranslate.mic import RATE, MicrophoneStream
 from livetranslate.translate import (
@@ -248,10 +247,17 @@ if __name__ == "__main__":
     update_subtitles: Callable[[str], None]
     close_signal: SignalInstance
 
+    # Use the regular GUI and toggle fullscreen if needed
+    app, update_subtitles, close_signal = start_gui()
+
+    # If fullscreen flag was provided, start in fullscreen mode
     if args.fullscreen:
-        app, update_subtitles, close_signal = start_gui_fullscreen()
-    else:
-        app, update_subtitles, close_signal = start_gui()
+        from PySide6.QtWidgets import QApplication
+
+        windows = QApplication.topLevelWidgets()
+        for window in windows:
+            # This will trigger our custom showFullScreen method
+            window.showFullScreen()
 
     target: str = args.target
     if not target:
@@ -282,8 +288,22 @@ if __name__ == "__main__":
     # Handle clean shutdown when ESC is pressed
     def cleanup_and_exit():
         print("Shutting down gracefully...")
-        asyncio_loop.stop()
-        thread.join(timeout=0.5)
+        # Try to stop the asyncio loop safely
+        try:
+            # Cancel any running task
+            if not task.done():
+                task.cancel()
+
+            # Create a task to stop the loop
+            asyncio_loop.call_soon_threadsafe(asyncio_loop.stop)
+
+            # Wait for the thread to terminate
+            if thread.is_alive():
+                thread.join(timeout=1.0)
+        except Exception as e:
+            print(f"Error during cleanup: {e}")
+
+        # Ensure application exits
         QApplication.quit()
 
     close_signal.connect(cleanup_and_exit)

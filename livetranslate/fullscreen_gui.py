@@ -97,10 +97,15 @@ class SubtitleMapWindow(QMainWindow):
 
     def keyPressEvent(self, event: QKeyEvent):
         if event.key() == Qt.Key_Escape:
-            # Emit close signal for graceful shutdown
-            self.close_signal.emit()
-            # Close the window
-            self.close()
+            # Check if in fullscreen mode
+            if self.isFullScreen():
+                # Exit fullscreen and return to normal window
+                self.showNormal()
+            else:
+                # Emit close signal for graceful shutdown
+                self.close_signal.emit()
+                # Close the window
+                self.close()
 
 
 def start_gui() -> tuple[QApplication, Callable[[str], None], SignalInstance]:
