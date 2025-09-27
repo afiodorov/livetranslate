@@ -95,3 +95,7 @@ python -m livetranslate.main -s ja-JP -t en-US -f
 ## Demo
 
 ![Demo of the livetranslate](https://github.com/afiodorov/livetranslate/raw/main/demo.gif)
+
+## Live Demo
+
+Try it out at [livetranslate.fiodorov.es](https://livetranslate.fiodorov.es)
