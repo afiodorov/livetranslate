@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import sys
+import tempfile
 from asyncio import (
     AbstractEventLoop,
     Queue,
@@ -38,6 +39,7 @@ async def consumer(
     source_language: str,
     target_language: str,
     update_subtitles: Callable[[str], None],
+    transcript_path: str,
 ) -> None:
     context: deque[str] = deque(maxlen=3)
 
@@ -60,6 +62,8 @@ async def consumer(
         if is_final:
             update_subtitles(translation)
             context.append(transcript)
+            with open(transcript_path, "a", encoding="utf-8") as f:
+                f.write(translation + "\n")
         else:
             update_subtitles(translation)
 
@@ -104,6 +108,7 @@ async def main(
     source_language: str,
     target_language: str,
     update_subtitles: Callable[[str], None],
+    transcript_path: str,
 ) -> None:
     loop: AbstractEventLoop = get_running_loop()
 
@@ -199,6 +204,7 @@ async def main(
                 source_language,
                 target_language,
                 update_subtitles,
+                transcript_path,
             )
         )
 
@@ -263,12 +269,20 @@ if __name__ == "__main__":
     if not target:
         target = args.source
 
+    # Create a temp file for the transcript
+    with tempfile.NamedTemporaryFile(
+        mode="w", prefix="livetranslate_", suffix=".txt", dir="/tmp", delete=False
+    ) as tf:
+        transcript_path = tf.name
+    print(f"Writing transcript to {transcript_path}")
+
     asyncio_loop: AbstractEventLoop = new_event_loop()
     task: Task[None] = asyncio_loop.create_task(
         main(
             source_language=args.source,
             target_language=target,
             update_subtitles=update_subtitles,
+            transcript_path=transcript_path,
         )
     )
 
@@ -287,6 +301,7 @@ if __name__ == "__main__":
 
     # Handle clean shutdown when ESC is pressed
     def cleanup_and_exit():
+        print(f"Transcript saved to {transcript_path}")
         print("Shutting down gracefully...")
         # Try to stop the asyncio loop safely
         try:
