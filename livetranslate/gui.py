@@ -22,7 +22,7 @@ class SubtitleMapWindow(QMainWindow):
         super().__init__(flags=Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
         # Define window dimensions as class variables
         self.window_width = 1200
-        self.window_height = 50
+        self.window_height = 90
 
         # Create styles and fonts
         self.normal_font = QApplication.font()
@@ -104,7 +104,7 @@ class SubtitleMapWindow(QMainWindow):
 
         # Configure label appearance
         self.current_subtitle_label.setFont(self.normal_font)
-        self.current_subtitle_label.setWordWrap(False)
+        self.current_subtitle_label.setWordWrap(True)
         self.current_subtitle_label.setStyleSheet(self.normal_label_style)
         self.current_subtitle_label.setSizePolicy(
             QSizePolicy.Preferred, QSizePolicy.Preferred

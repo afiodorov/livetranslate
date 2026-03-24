@@ -8,6 +8,7 @@ dependencies = [
     "PyAudio==0.2.14",
     "aiohttp==3.9.1",
     "python-dotenv",
+    "pypinyin>=0.51.0",
 ]
 
 [build-system]

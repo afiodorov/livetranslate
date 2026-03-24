@@ -19,6 +19,8 @@ from urllib.parse import urlencode
 
 import websockets
 from dotenv import load_dotenv
+from pypinyin import Style
+from pypinyin import pinyin as to_pinyin
 from PySide6.QtCore import QTimer, SignalInstance
 from PySide6.QtWidgets import QApplication
 from websockets.client import WebSocketClientProtocol
@@ -59,13 +61,18 @@ async def consumer(
         if not translation:
             continue
 
+        display_text = translation
+        if source_language == target_language == "ZH":
+            pinyin_str = " ".join(s[0] for s in to_pinyin(translation, style=Style.TONE))
+            display_text = f"{translation}\n{pinyin_str}"
+
         if is_final:
-            update_subtitles(translation)
+            update_subtitles(display_text)
             context.append(transcript)
             with open(transcript_path, "a", encoding="utf-8") as f:
-                f.write(translation + "\n")
+                f.write(display_text + "\n")
         else:
-            update_subtitles(translation)
+            update_subtitles(display_text)
 
 
 async def sender(
