@@ -58,6 +58,7 @@ class SubtitleMapWindow(QMainWindow):
         self.init_ui()
 
         self.dragging = False
+        self.drag_moved = False
         self.offset = None
 
         self.update_subtitles_signal.connect(self.update_subtitles)
@@ -161,18 +162,26 @@ class SubtitleMapWindow(QMainWindow):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            self.dragging = True
+            self.dragging = False
+            self.drag_moved = False
             self.offset = event.pos()
             self.setCursor(Qt.ClosedHandCursor)
 
     def mouseMoveEvent(self, event):
-        if self.dragging and self.offset:
+        if self.offset:
             new_pos = event.globalPos() - self.offset
             self.move(new_pos)
+            self.dragging = True
+            self.drag_moved = True
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
+            if not self.drag_moved:
+                text = self.current_subtitle_label.text()
+                if text:
+                    QApplication.clipboard().setText(text)
             self.dragging = False
+            self.drag_moved = False
             self.offset = None
             self.setCursor(Qt.OpenHandCursor)
 
