@@ -18,11 +18,10 @@ class SubtitleMapWindow(QMainWindow):
     update_subtitles_signal = Signal(str)
     close_signal = Signal()
 
-    def __init__(self):
+    def __init__(self, two_line: bool = False):
         super().__init__(flags=Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
-        # Define window dimensions as class variables
         self.window_width = 1200
-        self.window_height = 90
+        self.window_height = 90 if two_line else 50
 
         # Create styles and fonts
         self.normal_font = QApplication.font()
@@ -232,11 +231,11 @@ class SubtitleMapWindow(QMainWindow):
                 self.showFullScreen()
 
 
-def start_gui() -> tuple[QApplication, Callable[[str], None], SignalInstance]:
+def start_gui(two_line: bool = False) -> tuple[QApplication, Callable[[str], None], SignalInstance]:
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     app: QApplication = QApplication(sys.argv)
-    main_window = SubtitleMapWindow()
+    main_window = SubtitleMapWindow(two_line=two_line)
     main_window.show()
 
     def update_subtitles_threadsafe(current_subtitle: str) -> None:

@@ -42,6 +42,7 @@ async def consumer(
     target_language: str,
     update_subtitles: Callable[[str], None],
     transcript_path: str,
+    bilingual: bool = False,
 ) -> None:
     context: deque[str] = deque(maxlen=3)
 
@@ -65,6 +66,8 @@ async def consumer(
         if source_language == target_language == "ZH":
             pinyin_str = " ".join(s[0] for s in to_pinyin(translation, style=Style.TONE))
             display_text = f"{translation}\n{pinyin_str}"
+        elif bilingual and source_language != target_language:
+            display_text = f"{transcript}\n{translation}"
 
         if is_final:
             update_subtitles(display_text)
@@ -116,6 +119,7 @@ async def main(
     target_language: str,
     update_subtitles: Callable[[str], None],
     transcript_path: str,
+    bilingual: bool = False,
 ) -> None:
     loop: AbstractEventLoop = get_running_loop()
 
@@ -212,6 +216,7 @@ async def main(
                 target_language,
                 update_subtitles,
                 transcript_path,
+                bilingual,
             )
         )
 
@@ -253,6 +258,13 @@ if __name__ == "__main__":
         default=False,
         help="Launch application fullscreen",
     )
+    parser.add_argument(
+        "-b",
+        "--bilingual",
+        action="store_true",
+        default=False,
+        help="Show original and translation side by side (stacked)",
+    )
 
     args = parser.parse_args()
 
@@ -260,8 +272,10 @@ if __name__ == "__main__":
     update_subtitles: Callable[[str], None]
     close_signal: SignalInstance
 
-    # Use the regular GUI and toggle fullscreen if needed
-    app, update_subtitles, close_signal = start_gui()
+    source_is_zh = args.source.lower().startswith("zh")
+    target_is_zh = (args.target or args.source).lower().startswith("zh")
+    two_line = args.bilingual or (source_is_zh and target_is_zh)
+    app, update_subtitles, close_signal = start_gui(two_line=two_line)
 
     # If fullscreen flag was provided, start in fullscreen mode
     if args.fullscreen:
@@ -290,6 +304,7 @@ if __name__ == "__main__":
             target_language=target,
             update_subtitles=update_subtitles,
             transcript_path=transcript_path,
+            bilingual=args.bilingual,
         )
     )
 
