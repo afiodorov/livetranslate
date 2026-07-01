@@ -33,7 +33,6 @@ from livetranslate.translate import (
     translate_text_deepl,
 )
 
-# Load environment variables from .env file
 load_dotenv()
 
 
@@ -189,8 +188,6 @@ async def main(
     deepgram_url: str = f"wss://api.deepgram.com/v1/listen?{query_string}"
     key: str = os.environ["DEEPGRAM_API_KEY"]
 
-    # translation_client no longer needed
-
     deepl_source = deepl_language(source_language)
     deepl_target = deepl_language(target_language)
 
@@ -213,8 +210,6 @@ async def main(
         target_language = source_language
     else:
         target_language = deepl_target
-
-    # Google Translate functionality has been removed
 
     async with MicrophoneStream(loop) as stream, websockets.connect(
         deepgram_url, extra_headers={"Authorization": f"Token {key}"}
@@ -260,7 +255,6 @@ if __name__ == "__main__":
         help="Target language (default: ''). When empty translation is disabled "
         "and only transcript is displayed",
     )
-    # Google Translate argument removed
     parser.add_argument(
         "-f",
         "--fullscreen",
