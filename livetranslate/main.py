@@ -14,6 +14,7 @@ from asyncio import (
 )
 from collections import Counter, deque
 from collections.abc import AsyncGenerator, Callable
+from dataclasses import dataclass
 from threading import Thread
 from urllib.parse import urlencode
 
@@ -36,8 +37,15 @@ from livetranslate.translate import (
 load_dotenv()
 
 
+@dataclass(frozen=True)
+class TranscriptSegment:
+    speaker: int
+    transcript: str
+    is_final: bool
+
+
 async def consumer(
-    queue: Queue[tuple[int, str, bool]],
+    queue: Queue[TranscriptSegment],
     source_language: str,
     target_language: str,
     update_subtitles: Callable[[str], None],
@@ -47,9 +55,9 @@ async def consumer(
     context: deque[str] = deque(maxlen=3)
 
     while True:
-        transcript: str = ""
-
-        _, transcript, is_final = await queue.get()
+        segment = await queue.get()
+        transcript = segment.transcript
+        is_final = segment.is_final
         if source_language != target_language:
             translation: str = await translate_text_deepl(
                 transcript, source_language, target_language, " ".join(context)
@@ -86,7 +94,7 @@ async def sender(
 
 
 async def receiver(
-    ws: WebSocketClientProtocol, queue: Queue[tuple[int, str, bool]]
+    ws: WebSocketClientProtocol, queue: Queue[TranscriptSegment]
 ) -> None:
     async for msg in ws:
         res = json.loads(msg)
@@ -110,7 +118,9 @@ async def receiver(
         if queue.full():
             _ = await queue.get()
             queue.task_done()
-        await queue.put((speaker, transcript, bool(res["is_final"])))
+        await queue.put(
+            TranscriptSegment(speaker, transcript, bool(res["is_final"]))
+        )
 
 
 async def main(
@@ -123,7 +133,7 @@ async def main(
 ) -> None:
     loop: AbstractEventLoop = get_running_loop()
 
-    queue: Queue[tuple[int, str, bool]] = Queue(maxsize=1)
+    queue: Queue[TranscriptSegment] = Queue(maxsize=1)
 
     params: dict[str, str] = {
         "diarize": "true",
